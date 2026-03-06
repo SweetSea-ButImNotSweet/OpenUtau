@@ -1,0 +1,13 @@
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  OpenUtau.Core -> C:\Users\Harry\Desktop\Random projects\OpenUtau\OpenUtau.Core\bin\Debug\net8.0\OpenUtau.Core.dll
+  OpenUtau.Plugin.Builtin -> C:\Users\Harry\Desktop\Random projects\OpenUtau\OpenUtau.Plugin.Builtin\bin\Debug\net8.0\OpenUtau.Plugin.Builtin.dll
+  OpenUtau -> C:\Users\Harry\Desktop\Random projects\OpenUtau\OpenUtau\bin\Debug\net8.0-windows\OpenUtau.dll
+  OpenUtau.Test -> C:\Users\Harry\Desktop\Random projects\OpenUtau\OpenUtau.Test\bin\Debug\net8.0-windows\OpenUtau.Test.dll
+Test run for C:\Users\Harry\Desktop\Random projects\OpenUtau\OpenUtau.Test\bin\Debug\net8.0-windows\OpenUtau.Test.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:     1, Skipped:     0, Total:     1, Duration: < 1 ms - OpenUtau.Test.dll (net8.0)

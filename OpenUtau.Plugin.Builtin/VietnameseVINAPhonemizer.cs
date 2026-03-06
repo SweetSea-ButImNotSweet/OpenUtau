@@ -40,6 +40,41 @@ namespace OpenUtau.Plugin.Builtin {
                 .ToDictionary(t => t.Item1, t => t.Item2);
         }
 
+        private static string RemoveTones(string text) {
+            if (string.IsNullOrEmpty(text)) return text;
+            return text
+                .Replace('à', 'a').Replace('á', 'a').Replace('ả', 'a').Replace('ã', 'a').Replace('ạ', 'a')
+                .Replace('ằ', 'ă').Replace('ắ', 'ă').Replace('ẳ', 'ă').Replace('ẵ', 'ă').Replace('ặ', 'ă')
+                .Replace('ầ', 'â').Replace('ấ', 'â').Replace('ẩ', 'â').Replace('ẫ', 'â').Replace('ậ', 'â')
+                .Replace('ờ', 'ơ').Replace('ớ', 'ơ').Replace('ở', 'ơ').Replace('ỡ', 'ơ').Replace('ợ', 'ơ')
+                .Replace('ì', 'i').Replace('í', 'i').Replace('ỉ', 'i').Replace('ĩ', 'i').Replace('ị', 'i')
+                .Replace('ỳ', 'y').Replace('ý', 'y').Replace('ỷ', 'y').Replace('ỹ', 'y').Replace('ỵ', 'y')
+                .Replace('è', 'e').Replace('é', 'e').Replace('ẻ', 'e').Replace('ẽ', 'e').Replace('ẹ', 'e')
+                .Replace('ề', 'ê').Replace('ế', 'ê').Replace('ể', 'ê').Replace('ễ', 'ê').Replace('ệ', 'ê')
+                .Replace('ò', 'o').Replace('ó', 'o').Replace('ỏ', 'o').Replace('õ', 'o').Replace('ọ', 'o')
+                .Replace('ồ', 'ô').Replace('ố', 'ô').Replace('ổ', 'ô').Replace('ỗ', 'ô').Replace('ộ', 'ô')
+                .Replace('ù', 'u').Replace('ú', 'u').Replace('ủ', 'u').Replace('ũ', 'u').Replace('ụ', 'u')
+                .Replace('ừ', 'ư').Replace('ứ', 'ư').Replace('ử', 'ư').Replace('ữ', 'ư').Replace('ự', 'ư');
+        }
+
+        static readonly string[] VVC_LIST = { "iên", "iêN", "iêm", "iêt", "iêk", "iêp", "iêu", "yên", "yêN", "yêm", "yêt", "yêk", "yêp", "yêu", "uôn", "uôN", "uôm", "uôt", "uôk", "uôi", "ươn", "ươN", "ươm", "ươt", "ươk", "ươp", "ươi", "ươu" };
+        static readonly string[] CCUOI_ENDS = { "k", "t", "C", "p", "." };
+        static readonly string[] C_STARTS = { "b", "C", "d", "f", "g", "h", "k", "K", "l", "m", "n", "N", "J", "r", "s", "t", "T", "Z", "v", "w", "z", "p", "'", "." };
+        static readonly string[] VV_ENDS = { "ai", "ơi", "oi", "ôi", "ui", "ưi", "ao", "eo", "êu", "iu", "an", "ơn", "in", "en", "ên", "on", "ôn", "un", "ưn", "am", "ơm", "im", "em", "êm", "om", "ôm", "um", "ưm", "aN", "ơN", "iN", "eN", "êN", "ưN", "aJ", "iJ", "êJ", "at", "ơt", "it", "et", "êt", "ot", "ôt", "ut", "ưt", "aC", "iC", "êC", "ak", "ơk", "ik", "ek", "êk", "ok", "ôk", "uk", "ưk", "ap", "ơp", "ip", "ep", "êp", "op", "ôp", "up", "ưp", "ia", "ua", "ưa", "ay", "ây", "uy", "au", "âu", "oa", "oe", "uê" };
+        static readonly string[] VITRINGAN_ENDS = { "ai", "ơi", "oi", "ôi", "ui", "ưi", "ao", "eo", "êu", "iu", "an", "ơn", "in", "en", "ên", "on", "ôn", "un", "ưn", "am", "ơm", "im", "em", "êm", "om", "ôm", "um", "ưm", "aN", "ơN", "iN", "eN", "êN", "ưN", "at", "ơt", "it", "et", "êt", "ot", "ôt", "ut", "ưt", "ak", "ơk", "ik", "ek", "êk", "ok", "ôk", "uk", "ưk", "ap", "ơp", "ip", "ep", "êp", "op", "ôp", "up", "ưp", "ia", "ua", "ưa", "uôN", "yt", "yn", "ym", "yC", "yp", "yk", "yN" };
+        static readonly string[] VITRIDAI_ENDS = { "uy", "au", "âu", "oa", "oe", "uê" };
+        static readonly string[] VITRITB_CONTAINS = { "ăt", "ât", "ăk", "âk", "ăp", "âp", "ăn", "ân", "ăN", "âN", "ăm", "âm", "aJ", "iJ", "êJ", "yJ", "ôN", "uN", "oN", "aC", "iC", "êC", "yC" };
+        static readonly string[] VITRITB_ENDS = { "oay", "uây", "ay", "ây", "oay'", "uây'", "ay'", "ây'" };
+        static readonly string[] _C_STARTS = { "f", "K", "l", "m", "n", "J", "N", "s", "v", "z" };
+        static readonly string[] _CW_STARTS = { "Ku", "Koa", "Koe", "Koă", "su", "soa", "soe", "soă", "zu", "zoa", "zoe", "zoă", "Ky", "Ki" };
+        static readonly string[] _CV_STARTS = { "g", "h", "'", "w", "y" };
+        static readonly string[] WV_CONTAINS = { "oa", "oe", "uâ", "uê", "uy", "uơ", "oă" };
+        static readonly string[] VV_UNDERSCORE_ENDS = { "ai", "eo", "ua", "ưa", "ơi", "oi", "ôi", "ui", "ưi", "ya", "êu", "ưu", "ao", "ia", "iu", "ai'", "eo'", "ua'", "ưa'", "ơi'", "oi'", "ôi'", "ui'", "ưi'", "ya'", "êu'", "ưu'", "ao'", "ia'", "iu'" };
+        static readonly string[] WAN_STARTS = { "K", "z" };
+        static readonly string[] H_STARTS = { "b", "d", "k", "l", "t", "T", "C", "m", "n", "J", "N", "h", "g", "." };
+        static readonly string[] VCP70_STARTS = { "b", "d", "g", "k", "l", "m", "n", "nh", "ng", "t", "th", "v", "w", "y" };
+
+
         private USinger singer;
 
         public override void SetSinger(USinger singer) => this.singer = singer;
@@ -100,19 +135,8 @@ namespace OpenUtau.Plugin.Builtin {
                 note.lyric = "quâc";
             }
             if (note.lyric != "gi" && note.lyric != "gin" && note.lyric != "gim" && note.lyric != "ginh" && note.lyric != "ging" && note.lyric != "git" && note.lyric != "gip" && note.lyric != "gic" && note.lyric != "gich") {
-                loi = note.lyric.Replace('à', 'a').Replace('á', 'a').Replace('ả', 'a').Replace('ã', 'a').Replace('ạ', 'a');
-                loi = note.lyric.Replace('ằ', 'ă').Replace('ắ', 'ă').Replace('ẳ', 'ă').Replace('ẵ', 'ă').Replace('ặ', 'ă');
-                loi = note.lyric.Replace('ầ', 'â').Replace('ấ', 'â').Replace('ẩ', 'â').Replace('ẫ', 'â').Replace('ậ', 'â');
-                loi = note.lyric.Replace('ờ', 'ơ').Replace('ớ', 'ơ').Replace('ở', 'ơ').Replace('ỡ', 'ơ').Replace('ợ', 'ơ');
-                loi = note.lyric.Replace('ì', 'i').Replace('í', 'i').Replace('ỉ', 'i').Replace('ĩ', 'i').Replace('ị', 'i');
-                loi = note.lyric.Replace('ỳ', 'y').Replace('ý', 'y').Replace('ỷ', 'y').Replace('ỹ', 'y').Replace('ỵ', 'y');
-                loi = note.lyric.Replace('è', 'e').Replace('é', 'e').Replace('ẻ', 'e').Replace('ẽ', 'e').Replace('ẹ', 'e');
-                loi = note.lyric.Replace('ề', 'ê').Replace('ế', 'ê').Replace('ể', 'ê').Replace('ễ', 'ê').Replace('ệ', 'ê');
-                loi = note.lyric.Replace('ò', 'o').Replace('ó', 'o').Replace('ỏ', 'o').Replace('õ', 'o').Replace('ọ', 'o');
-                loi = note.lyric.Replace('ồ', 'ô').Replace('ố', 'ô').Replace('ổ', 'ô').Replace('ỗ', 'ô').Replace('ộ', 'ô');
-                loi = note.lyric.Replace('ù', 'u').Replace('ú', 'u').Replace('ủ', 'u').Replace('ũ', 'u').Replace('ụ', 'u');
-                loi = note.lyric.Replace('ừ', 'ư').Replace('ứ', 'ư').Replace('ử', 'ư').Replace('ữ', 'ư').Replace('ự', 'ư');
-                loi = note.lyric.Replace("ch", "C").Replace("d", "z").Replace("đ", "d").Replace("ph", "f").Replace("ch", "C")
+                loi = RemoveTones(note.lyric);
+                loi = loi.Replace("ch", "C").Replace("d", "z").Replace("đ", "d").Replace("ph", "f").Replace("ch", "C")
                     .Replace("gi", "z").Replace("gh", "g").Replace("c", "k").Replace("kh", "K").Replace("ng", "N")
                     .Replace("ngh", "N").Replace("nh", "J").Replace("x", "s").Replace("tr", "C").Replace("th", "T")
                     .Replace("q", "k").Replace("r", "z");
@@ -120,85 +144,30 @@ namespace OpenUtau.Plugin.Builtin {
                 loi = note.lyric.Replace('ì', 'i').Replace('í', 'i').Replace('ỉ', 'i').Replace('ĩ', 'i').Replace('ị', 'i');
                 loi = loi.Replace("gi", "zi").Replace("ng", "N").Replace("nh", "J").Replace("ch", "C").Replace("c", "k");
             }
-            bool tontaiVVC = loi.Contains("iên") || loi.Contains("iêN") || loi.Contains("iêm") || loi.Contains("iêt") || loi.Contains("iêk") || loi.Contains("iêp") || loi.Contains("iêu")
-                           || loi.Contains("yên") || loi.Contains("yêN") || loi.Contains("yêm") || loi.Contains("yêt") || loi.Contains("yêk") || loi.Contains("yêp") || loi.Contains("yêu")
-                           || loi.Contains("uôn") || loi.Contains("uôN") || loi.Contains("uôm") || loi.Contains("uôt") || loi.Contains("uôk") || loi.Contains("uôi")
-                           || loi.Contains("ươn") || loi.Contains("ươN") || loi.Contains("ươm") || loi.Contains("ươt") || loi.Contains("ươk") || loi.Contains("ươp") || loi.Contains("ươi") || loi.Contains("ươu");
+            bool tontaiVVC = VVC_LIST.Any(loi.Contains);
             int x = prevNeighbour?.duration ?? default(int);
             if (x < 160 && prevNeighbour != null) { VCP = - (x * 4 / 8); }
-            else if (loi.StartsWith("b") || loi.StartsWith("d") || loi.StartsWith("g") || loi.StartsWith("d") || loi.StartsWith("k") || loi.StartsWith("l")
-                || loi.StartsWith("m") || loi.StartsWith("n") || loi.StartsWith("nh") || loi.StartsWith("ng") || loi.StartsWith("t") || loi.StartsWith("th")
-                 || loi.StartsWith("v") || loi.StartsWith("w") || loi.StartsWith("y")) VCP = -70;
-            else VCP = -110;
-            bool koVVCchia;
-            if (tontaiVVC == true) {
-                koVVCchia = false;
-            } else
-                koVVCchia = true;
-            bool tontaiCcuoi = (loi.EndsWith("k") || loi.EndsWith("t") || loi.EndsWith("C") || loi.EndsWith("p") || loi.EndsWith("."));
-            bool tontaiC = loi.StartsWith("b") || loi.StartsWith("C") || loi.StartsWith("d") || loi.StartsWith("f")
-                         || loi.StartsWith("g") || loi.StartsWith("h") || loi.StartsWith("k") || loi.StartsWith("K")
-                         || loi.StartsWith("l") || loi.StartsWith("m") || loi.StartsWith("n") || loi.StartsWith("N")
-                         || loi.StartsWith("J") || loi.StartsWith("r") || loi.StartsWith("s") || loi.StartsWith("t")
-                         || loi.StartsWith("T") || loi.StartsWith("Z") || loi.StartsWith("v") || loi.StartsWith("w")
-                         || loi.StartsWith("z") || loi.StartsWith("p") || loi.StartsWith("'") || loi.StartsWith(".");
-            bool kocoC;
-            if (tontaiC == true) {
-                kocoC = false;
-            } else
-                kocoC = true;
+            else if (VCP70_STARTS.Any(loi.StartsWith)) { VCP = -70; }
+            else { VCP = -110; }
+
+            bool koVVCchia = !tontaiVVC;
+            bool tontaiCcuoi = CCUOI_ENDS.Any(loi.EndsWith);
+            bool tontaiC = C_STARTS.Any(loi.StartsWith);
+            bool kocoC = !tontaiC;
             bool BR = note.lyric.StartsWith("breath");
-            bool tontaiVV = (loi.EndsWith("ai") || loi.EndsWith("ơi") || loi.EndsWith("oi") || loi.EndsWith("ôi") || loi.EndsWith("ui") || loi.EndsWith("ưi")
-                          || loi.EndsWith("ao") || loi.EndsWith("eo") || loi.EndsWith("êu") || loi.EndsWith("iu")
-                          || loi.EndsWith("an") || loi.EndsWith("ơn") || loi.EndsWith("in") || loi.EndsWith("en") || loi.EndsWith("ên") || loi.EndsWith("on") || loi.EndsWith("ôn") || loi.EndsWith("un") || loi.EndsWith("ưn")
-                          || loi.EndsWith("am") || loi.EndsWith("ơm") || loi.EndsWith("im") || loi.EndsWith("em") || loi.EndsWith("êm") || loi.EndsWith("om") || loi.EndsWith("ôm") || loi.EndsWith("um") || loi.EndsWith("ưm")
-                          || loi.EndsWith("aN") || loi.EndsWith("ơN") || loi.EndsWith("iN") || loi.EndsWith("eN") || loi.EndsWith("êN") || loi.EndsWith("ưN")
-                          || loi.EndsWith("aJ") || loi.EndsWith("iJ") || loi.EndsWith("êJ")
-                          || loi.EndsWith("at") || loi.EndsWith("ơt") || loi.EndsWith("it") || loi.EndsWith("et") || loi.EndsWith("êt") || loi.EndsWith("ot") || loi.EndsWith("ôt") || loi.EndsWith("ut") || loi.EndsWith("ưt")
-                          || loi.EndsWith("aC") || loi.EndsWith("iC") || loi.EndsWith("êC")
-                          || loi.EndsWith("ak") || loi.EndsWith("ơk") || loi.EndsWith("ik") || loi.EndsWith("ek") || loi.EndsWith("êk") || loi.EndsWith("ok") || loi.EndsWith("ôk") || loi.EndsWith("uk") || loi.EndsWith("ưk")
-                          || loi.EndsWith("ap") || loi.EndsWith("ơp") || loi.EndsWith("ip") || loi.EndsWith("ep") || loi.EndsWith("êp") || loi.EndsWith("op") || loi.EndsWith("ôp") || loi.EndsWith("up") || loi.EndsWith("ưp")
-                          || loi.EndsWith("ia") || loi.EndsWith("ua") || loi.EndsWith("ưa")
-                          || loi.EndsWith("ay") || loi.EndsWith("ây") || loi.EndsWith("uy")
-                          || loi.EndsWith("au") || loi.EndsWith("âu")
-                          || loi.EndsWith("oa") || loi.EndsWith("oe") || loi.EndsWith("uê"));
-            bool ViTriNgan = (loi.EndsWith("ai") || loi.EndsWith("ơi") || loi.EndsWith("oi") || loi.EndsWith("ôi") || loi.EndsWith("ui") || loi.EndsWith("ưi")
-                  || loi.EndsWith("ao") || loi.EndsWith("eo") || loi.EndsWith("êu") || loi.EndsWith("iu")
-                  || loi.EndsWith("an") || loi.EndsWith("ơn") || loi.EndsWith("in") || loi.EndsWith("en") || loi.EndsWith("ên") || loi.EndsWith("on") || loi.EndsWith("ôn") || loi.EndsWith("un") || loi.EndsWith("ưn")
-                  || loi.EndsWith("am") || loi.EndsWith("ơm") || loi.EndsWith("im") || loi.EndsWith("em") || loi.EndsWith("êm") || loi.EndsWith("om") || loi.EndsWith("ôm") || loi.EndsWith("um") || loi.EndsWith("ưm")
-                  || loi.EndsWith("aN") || loi.EndsWith("ơN") || loi.EndsWith("iN") || loi.EndsWith("eN") || loi.EndsWith("êN") || loi.EndsWith("ưN")
-                  || loi.EndsWith("at") || loi.EndsWith("ơt") || loi.EndsWith("it") || loi.EndsWith("et") || loi.EndsWith("êt") || loi.EndsWith("ot") || loi.EndsWith("ôt") || loi.EndsWith("ut") || loi.EndsWith("ưt")
-                  || loi.EndsWith("ak") || loi.EndsWith("ơk") || loi.EndsWith("ik") || loi.EndsWith("ek") || loi.EndsWith("êk") || loi.EndsWith("ok") || loi.EndsWith("ôk") || loi.EndsWith("uk") || loi.EndsWith("ưk")
-                  || loi.EndsWith("ap") || loi.EndsWith("ơp") || loi.EndsWith("ip") || loi.EndsWith("ep") || loi.EndsWith("êp") || loi.EndsWith("op") || loi.EndsWith("ôp") || loi.EndsWith("up") || loi.EndsWith("ưp")
-                  || loi.EndsWith("ia") || loi.EndsWith("ua") || loi.EndsWith("ưa") || loi.EndsWith("uôN")
-                  || loi.EndsWith("yt") || loi.EndsWith("yn") || loi.EndsWith("ym") || loi.EndsWith("yC") || loi.EndsWith("yp") || loi.EndsWith("yk") || loi.EndsWith("yN")
-                  || loi.EndsWith("uya") && (note.lyric != "qua"));
-            bool ViTriDai = loi.EndsWith("uy")
-                  || loi.EndsWith("au") || loi.EndsWith("âu")
-                  || loi.EndsWith("oa") || loi.EndsWith("oe") || loi.EndsWith("uê") || note.lyric.EndsWith("qua");
-            bool ViTriTB = loi.Contains("ăt") || loi.Contains("ât") || loi.EndsWith("oay") || loi.EndsWith("uây") || loi.EndsWith("ay") || loi.EndsWith("ây")
-                  || loi.Contains("ăk") || loi.Contains("âk") || loi.EndsWith("oay'") || loi.EndsWith("uây'") || loi.EndsWith("ay'") || loi.EndsWith("ây'")
-                  || loi.Contains("ăp") || loi.Contains("âp")
-                  || loi.Contains("ăn") || loi.Contains("ân")
-                  || loi.Contains("ăN") || loi.Contains("âN")
-                  || loi.Contains("ăm") || loi.Contains("âm")
-                  || loi.Contains("aJ") || loi.Contains("iJ") || loi.Contains("êJ") || loi.Contains("yJ")
-                  || loi.Contains("ôN") || loi.Contains("uN") || loi.Contains("oN")
-                  || loi.Contains("aC") || loi.Contains("iC") || loi.Contains("êC") || loi.Contains("yC");
-            bool _C = loi.StartsWith("f") || loi.StartsWith("K") || loi.StartsWith("l") || loi.StartsWith("m") || loi.StartsWith("n") || loi.StartsWith("J") || loi.StartsWith("N") || loi.StartsWith("s") || loi.StartsWith("v") || loi.StartsWith("z");
-            bool _Cw = loi.StartsWith("Ku") || loi.StartsWith("Koa") || loi.StartsWith("Koe") || loi.StartsWith("Koă") || loi.StartsWith("su") || loi.StartsWith("soa") || loi.StartsWith("soe") || loi.StartsWith("soă") || loi.StartsWith("zu") || loi.StartsWith("zoa") || loi.StartsWith("zoe") || loi.StartsWith("zoă") || loi.StartsWith("Ky") || loi.StartsWith("Ki");
-            bool _CV = loi.StartsWith("g") || loi.StartsWith("h") || loi.StartsWith("'") || loi.StartsWith("w") || loi.StartsWith("y") || loi.StartsWith("'");
-            bool wV = loi.Contains("oa") || loi.Contains("oe") || loi.Contains("uâ") || loi.Contains("uê") || loi.Contains("uy") || loi.Contains("uơ") || loi.Contains("oă");
-            bool VV_ = (loi.EndsWith("ai") || loi.EndsWith("eo") || loi.EndsWith("ua") || loi.EndsWith("ưa") || loi.EndsWith("ơi") || loi.EndsWith("oi") || loi.EndsWith("ôi") || loi.EndsWith("ui") || loi.EndsWith("ưi") || loi.EndsWith("ya")
-                || loi.EndsWith("êu") || loi.EndsWith("ưu") || loi.EndsWith("ao") || loi.EndsWith("ia") || loi.EndsWith("ua") || loi.EndsWith("ưa") || loi.EndsWith("iu")
-                || loi.EndsWith("ai'") || loi.EndsWith("eo'") || loi.EndsWith("ua'") || loi.EndsWith("ưa'") || loi.EndsWith("ơi'") || loi.EndsWith("oi'") || loi.EndsWith("ôi'") || loi.EndsWith("ui'") || loi.EndsWith("ưi'") || loi.EndsWith("ya'")
-                || loi.EndsWith("êu'") || loi.EndsWith("ưu'") || loi.EndsWith("ao'") || loi.EndsWith("ia'") || loi.EndsWith("ua'") || loi.EndsWith("ưa'") || loi.EndsWith("iu'"))
-                && (note.lyric != "qua");
-            bool wAn = loi.StartsWith("K") || loi.StartsWith("z");
-            bool H = loi.StartsWith("b") || loi.StartsWith("d") || loi.StartsWith("k") || loi.StartsWith("l")
-                || loi.StartsWith("t") || loi.StartsWith("T") || loi.StartsWith("C")
-                || loi.StartsWith("m") || loi.StartsWith("n") || loi.StartsWith("J")
-                || loi.StartsWith("N") || loi.StartsWith("h") || loi.StartsWith("g") || loi.StartsWith(".");
+
+            bool tontaiVV = VV_ENDS.Any(loi.EndsWith);
+            bool ViTriNgan = VITRINGAN_ENDS.Any(loi.EndsWith) || (loi.EndsWith("uya") && note.lyric != "qua");
+            bool ViTriDai = VITRIDAI_ENDS.Any(loi.EndsWith) || note.lyric.EndsWith("qua");
+            bool ViTriTB = VITRITB_CONTAINS.Any(loi.Contains) || VITRITB_ENDS.Any(loi.EndsWith);
+
+            bool _C = _C_STARTS.Any(loi.StartsWith);
+            bool _Cw = _CW_STARTS.Any(loi.StartsWith);
+            bool _CV = _CV_STARTS.Any(loi.StartsWith);
+            bool wV = WV_CONTAINS.Any(loi.Contains);
+            bool VV_ = VV_UNDERSCORE_ENDS.Any(loi.EndsWith) && note.lyric != "qua";
+            bool wAn = WAN_STARTS.Any(loi.StartsWith);
+            bool H = H_STARTS.Any(loi.StartsWith);
             if (ViTriTB) {
                 ViTri = Medium;
             }
@@ -228,7 +197,7 @@ namespace OpenUtau.Plugin.Builtin {
                     } else
                         phoneme = $"kwa";
                 } else {
-                    // 1 âm 
+                    // 1 âm
                     if (dem == 1) {
                         string N = loi.Substring(0, 1);
                         N = N.Replace("ă", "a").Replace("â", "A").Replace("ơ", "@").Replace("y", "i").Replace("ê", "E").Replace("ô", "O")
@@ -2001,7 +1970,7 @@ namespace OpenUtau.Plugin.Builtin {
                             new Phoneme { phoneme = $"{V} -", position = End });
                                         } else phonemes.Add(
                             new Phoneme { phoneme = $"- {C}{V}" });
-                                    } else 
+                                    } else
                                     if (NoNext) {
                                         phonemes.Add(
                             new Phoneme { phoneme = $"{vow}{C}", position = VCP });
