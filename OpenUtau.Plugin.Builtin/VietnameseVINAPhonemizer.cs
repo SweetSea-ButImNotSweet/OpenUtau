@@ -147,7 +147,7 @@ namespace OpenUtau.Plugin.Builtin {
         static readonly string[] _C_STARTS = { "f", "K", "l", "m", "n", "J", "N", "s", "v", "z" };
         static readonly string[] _CW_STARTS = { "Ku", "Koa", "Koe", "Koă", "su", "soa", "soe", "soă", "zu", "zoa", "zoe", "zoă", "Ky", "Ki" };
         static readonly string[] _CV_STARTS = { "g", "h", "'", "w", "y" };
-        static readonly string[] WV_CONTAINS = { "oa", "oe", "uâ", "uê", "uy", "uơ", "oă" };
+        static readonly string[] WV_CONTAINS = { "oa", "oe", "uâ", "uê", "uy", "uơ", "oă", "wa" };
         static readonly string[] VV_UNDERSCORE_ENDS = { "ai", "eo", "ua", "ưa", "ơi", "oi", "ôi", "ui", "ưi", "ya", "êu", "ưu", "ao", "ia", "iu", "ai'", "eo'", "ua'", "ưa'", "ơi'", "oi'", "ôi'", "ui'", "ưi'", "ya'", "êu'", "ưu'", "ao'", "ia'", "iu'" };
         static readonly string[] WAN_STARTS = { "K", "z" };
         static readonly string[] H_STARTS = { "b", "d", "k", "l", "t", "T", "C", "m", "n", "J", "N", "h", "g", "." };
@@ -242,14 +242,7 @@ namespace OpenUtau.Plugin.Builtin {
             bool prevtontaiCcuoi = false;
             bool NoVCP = false;
             if (prevNeighbour == null) {
-                if (note.lyric == "qua") {
-                    if (NoNext) {
-                        phonemes.Add(new Phoneme { phoneme = "kwa" });
-                        phonemes.Add(new Phoneme { phoneme = "a -", position = End });
-                    } else {
-                        phoneme = "kwa";
-                    }
-                } else {
+                {
                     // 1 âm
                     if (dem == 1) {
                         string N = loi.Substring(0, 1);
@@ -677,15 +670,16 @@ namespace OpenUtau.Plugin.Builtin {
                                         new Phoneme { phoneme = $"A{N}", position = Medium });
                                                 phonemes.Add(
                                         new Phoneme { phoneme = $"{N_} -", position = End });
-                                            } else
+                                            } else {
                                                 phonemes.Add(
                                         new Phoneme { phoneme = $"{C}w" });
-                                            phonemes.Add(
+                                                phonemes.Add(
                                         new Phoneme { phoneme = $"_w@", position = Long });
-                                            phonemes.Add(
+                                                phonemes.Add(
                                         new Phoneme { phoneme = $"A{N}", position = Medium });
-                                            phonemes.Add(
+                                                phonemes.Add(
                                         new Phoneme { phoneme = $"{N_} -", position = End });
+                                            }
                                         } else { //
                                             if (_C) {
                                                 phonemes.Add(
@@ -889,13 +883,14 @@ namespace OpenUtau.Plugin.Builtin {
                                     new Phoneme { phoneme = $"{VVC}", position = ViTri });
                                     phonemes.Add(
                                     new Phoneme { phoneme = $"{N} -", position = End });
-                                } else
+                                } else {
                                     phonemes.Add(
                                     new Phoneme { phoneme = $"{C}{V1}{V2}" });
-                                phonemes.Add(
-                                    new Phoneme { phoneme = $"{VVC}", position = ViTri });
-                                phonemes.Add(
-                                    new Phoneme { phoneme = $"{N} -", position = End });
+                                    phonemes.Add(
+                                        new Phoneme { phoneme = $"{VVC}", position = ViTri });
+                                    phonemes.Add(
+                                        new Phoneme { phoneme = $"{N} -", position = End });
+                                }
                             } else { // có note kế tiếp
                                 if (_C) {
                                     phonemes.Add(
@@ -1181,30 +1176,7 @@ namespace OpenUtau.Plugin.Builtin {
                 if (note.lyric.StartsWith("?")) {
                     phoneme = note.lyric.Substring(1);
                 } else {
-                    if (note.lyric == "qua") {
-                        if (NoVCP) {
-                            if (NoNext) {
-                                phonemes.Add(
-                        new Phoneme { phoneme = $"kwa" });
-                                phonemes.Add(
-                        new Phoneme { phoneme = $"a -", position = End });
-                            } else phonemes.Add(
-                        new Phoneme { phoneme = $"kwa" });
-                        } else
-                            if (NoNext) {
-                                phonemes.Add(
-                            new Phoneme { phoneme = $"{vow} k", position = VCP });
-                                phonemes.Add(
-                            new Phoneme { phoneme = $"kwa" });
-                                phonemes.Add(
-                            new Phoneme { phoneme = $"a -", position = End });
-                            } else {
-                                phonemes.Add(
-                            new Phoneme { phoneme = $"{vow} k", position = VCP });
-                                phonemes.Add(
-                                new Phoneme { phoneme = $"kwa" });
-                            }
-                    } else {
+                    {
                         // 1 âm
                         if (dem == 1 && loi != "R") {
                             string N = loi;
@@ -1616,7 +1588,7 @@ namespace OpenUtau.Plugin.Builtin {
                                             phonemes.Add(
                                 new Phoneme { phoneme = $"{VC}", position = ViTri });
                                         } else
-                                            if (note.lyric.EndsWith("uân")) {
+                                            if (note.lyric.EndsWith("uân") || note.lyric.EndsWith("uâng")) {
                                                 if (wAn == false) {
                                                     if (NoNext) {
                                                         if (loi.StartsWith(".")) {
