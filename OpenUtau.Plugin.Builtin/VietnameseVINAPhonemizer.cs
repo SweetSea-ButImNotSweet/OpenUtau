@@ -248,7 +248,6 @@ namespace OpenUtau.Plugin.Builtin {
 
             if (note.lyric.StartsWith("?")) {
                 AddPhoneme(phonemes, note.lyric[1..]);
-                // Map OTO và return ngay
                 var attr0 = note.phonemeAttributes?.FirstOrDefault(attr => attr.index == 0) ?? default;
                 if (
                     singer.TryGetMappedOto(
@@ -276,8 +275,6 @@ namespace OpenUtau.Plugin.Builtin {
             if (specialGiEndings.Contains(loi)) {
                 loi = loi.Replace("gi", "zi");
             }
-            // Bước quan quyết định: Nén chữ để "lừa" biến đếm độ dài (loi.Length) bên dưới.
-            // Ví dụ: "cho" (3 chữ) -> "Co" (2 đơn vị âm thanh) -> Rơi đúng vào nhánh xử lý 2 âm.
             loi = EncodeToVina(loi);
 
             bool tontaiVVC = VVC_LIST.Any(loi.EndsWith);
@@ -296,7 +293,6 @@ namespace OpenUtau.Plugin.Builtin {
 
             var (kocoC, koVVCchia) = (!tontaiC, !tontaiVVC);
 
-            // Calculate VCP dynamically
             if (VCP70) {
                 VCP = -70;
             } else {
@@ -306,7 +302,6 @@ namespace OpenUtau.Plugin.Builtin {
                 VCP = -(prevNeighbour.Value.duration * 4 / 8);
             }
 
-            // Adjust timing positions based on lyric characteristics
             ViTri = Short;
             if (VITRITB_CONTAINS.Any(loi.Contains) || VITRITB_ENDS.Any(loi.EndsWith)) {
                 ViTri = Medium;
@@ -361,7 +356,6 @@ namespace OpenUtau.Plugin.Builtin {
                         }
                     }
                 }
-                return new Result { phonemes = phonemes.ToArray() };
             } else if (loi == "R") {
                 if (isFirstNote) {
                     string N = "R";
@@ -374,1098 +368,852 @@ namespace OpenUtau.Plugin.Builtin {
                 } else {
                     AddPhoneme(phonemes, $"{vow} --");
                 }
-                // 1 âm
-            } else if (dem == 1) {
-                string N = loi;
-                N = DecodeVinaConsonants(N);
-                string N2 = N;
+            } else if (note.lyric.StartsWith("y") && koVVCchia) { // phụ âm y
+                bool hasPrefixVCP = prevtontaiCcuoi;
                 if (!isFirstNote) {
-                    bool A = vow == "o" || vow == "O" || vow == "u";
-                    if (A && loi == "ng") N2 = "ng0";
-                    if (!IsNasalLetter(loi)) {
-                        vow += " ";
-                    }
-                    if (IsNasalLetter(loi) && prevtontaiCcuoi) { vow = "- "; } else if (prevtontaiCcuoi)
-                        vow = ".";
+                    vow += " ";
                 }
-                string onsetPrefix = isFirstNote ? "- " : vow;
 
-                if (NoNext) {
-                    AddPhoneme(phonemes, $"{onsetPrefix}{N}");
-                    AddPhoneme(phonemes, $"{N2} -", End);
-                } else {
-                    AddPhoneme(phonemes, $"{onsetPrefix}{N}");
-                }
-                // 2 âm CV, ví dụ: "ba"
-            } else if ((dem == 2) && tontaiC) {
-                string N = loi;
-                string N1 = loi.Substring(0, 1);
-                string N2 = loi.Substring(1, 1);
-                N1 = DecodeVinaConsonants(N1);
-                if (_Cw) {
-                    if (N2 == "u") N1 = N1 + "w";
-                    if ((N2 == "i") || (N2 == "y")) N1 = N1 + "y";
-                }
-                N = DecodeVinaConsonants(N);
-                N2 = DecodeVinaConsonants(N2);
-
-                if (_CV && (isFirstNote || prevtontaiCcuoi)) { N = "- " + N; }
-                if (!isFirstNote) vow += " ";
-
-                bool hasVCP = isFirstNote ? _C : !NoVCP;
-                string prefixVCP = isFirstNote ? "- " : vow;
-
-                if (NoNext) {
-                    if (hasVCP) {
-                        AddPhoneme(phonemes, $"{prefixVCP}{N1}", VCP);
-                        AddPhoneme(phonemes, $"{N}");
-                        AddPhoneme(phonemes, $"{N2} -", End);
-                    } else {
-                        AddPhoneme(phonemes, $"{N}");
-                        AddPhoneme(phonemes, $"{N2} -", End);
-                    }
-                } else if (hasVCP) {
-                    if (hasVCP) {
-                        AddPhoneme(phonemes, $"{prefixVCP}{N1}", VCP);
-                        AddPhoneme(phonemes, $"{N}");
-                    } else {
-                        AddPhoneme(phonemes, $"{N}");
-                    }
-                }
-                // 3 âm CVV/CVC, ví dụ: "hoa" "hang" "hát"
-            } else if (dem == 3 && tontaiC && !fry) {
-                string C = loi.Substring(0, 1);
-                string V1 = loi.Substring(1, 1);
-                string V2 = loi.Substring(2);
-                string V2_2 = V2;
-                string Cw = C;
-                string V1_1 = V1;
-                if (loi.EndsWith("uy")) { V2 = "i"; V2_2 = V2; }
-                bool kAn = loi.EndsWith("kAn");
-                if (V1 == "â") V1 = "@";
-                if (V1 == "ă") V1_1 = "ae";
-                if (wV && _Cw) {
-                    Cw = C + "w";
-                    V1 = "w";
-                } else if (wV) {
-                    V1 = "w";
-                } else if (_Cw) Cw = C + "w";
-                if (V1 == "i" && _Cw) Cw = C + "y";
-                Cw = DecodeVinaConsonants(Cw);
-                C = DecodeVinaConsonants(C);
-                V1 = DecodeVinaConsonants(V1);
-                V2 = DecodeVinaConsonants(V2);
-                V2_2 = DecodeVinaConsonants(V2_2);
-                V1_1 = DecodeVinaConsonants(V1_1);
-                V2_2 = DecodeVinaConsonants(V2_2);
-                V1_1 = DecodeVinaConsonants(V1_1);
-
-                string N = V2;
-                ApDungNguyenTacRieng(loi, V1 + V2, ref V2, ref V2_2, ref N, strictToneShift: true);
-
-                if (_CV && (isFirstNote || prevtontaiCcuoi)) { C = "- " + C; }
-                if (!isFirstNote) vow += " ";
-                bool hasVCP = isFirstNote ? _C : !NoVCP;
-                string prefixVCP = isFirstNote ? "- " : vow;
-
-                if (tontaiCcuoi) { // có C cuối (at, ac,...)
-                    if (hasVCP) {
-                        AddPhoneme(phonemes, $"{prefixVCP}{Cw}", VCP);
-                        AddPhoneme(phonemes, $"{C}{V1}");
-                        AddPhoneme(phonemes, $"{V1_1}{V2_2}", ViTri);
-                    } else {
-                        AddPhoneme(phonemes, $"{C}{V1}");
-                        AddPhoneme(phonemes, $"{V1_1}{V2_2}", ViTri);
-                    }
-                } else if (kAn) {
-                    if (NoNext) {
-                        if (hasVCP) {
-                            AddPhoneme(phonemes, $"{prefixVCP}k", VCP);
+                if (dem == 2) { // ya
+                    string C = note.lyric.Substring(0, 1);
+                    string V = note.lyric.Substring(1, 1);
+                    V = DecodeVinaConsonants(V);
+                    if (isFirstNote || hasPrefixVCP) {
+                        if (NoNext) {
+                            AddPhoneme(phonemes, $"- {C}{V}");
+                            AddPhoneme(phonemes, $"{V} -", End); // Using End as per branch 1 in original for ya
+                        } else {
+                            AddPhoneme(phonemes, $"- {C}{V}");
                         }
-                        AddPhoneme(phonemes, $"kAn");
-                        AddPhoneme(phonemes, $"n -", End);
                     } else {
-                        if (hasVCP) {
-                            AddPhoneme(phonemes, $"{prefixVCP}k", VCP);
+                        if (NoNext) {
+                            AddPhoneme(phonemes, $"{vow}{C}", VCP);
+                            AddPhoneme(phonemes, $"{C}{V}");
+                            AddPhoneme(phonemes, $"{V} -", End);
+                        } else {
+                            AddPhoneme(phonemes, $"{vow}{C}", VCP);
+                            AddPhoneme(phonemes, $"{C}{V}");
                         }
-                        AddPhoneme(phonemes, $"kAn");
                     }
-                } else if (NoNext) { // không có nốt kế tiếp
-                    if (hasVCP) {
-                        AddPhoneme(phonemes, $"{prefixVCP}{Cw}", VCP);
-                    }
-                    if (VV_) {
-                        AddPhoneme(phonemes, $"{C}{V1}");
-                        AddPhoneme(phonemes, $"{V1_1}{V2} -", End);
-                    } else if (wV) {
-                        AddPhoneme(phonemes, $"{C}{V1}{V2_2}");
-                        AddPhoneme(phonemes, $"{V2} -", End);
-                    } else { // bình thường
-                        AddPhoneme(phonemes, $"{C}{V1}");
-                        AddPhoneme(phonemes, $"{V1_1}{V2_2}", ViTri);
-                        AddPhoneme(phonemes, $"{N} -", End);
-                    }
-                } else { // có nốt kế tiếp
-                    if (hasVCP) {
-                        AddPhoneme(phonemes, $"{prefixVCP}{Cw}", VCP);
-                    }
-                    if (VV_) {
-                        AddPhoneme(phonemes, $"{C}{V1}");
-                        AddPhoneme(phonemes, $"{V1_1}{V2_2}", ViTri);
-                    } else if (wV) {
-                        AddPhoneme(phonemes, $"{C}{V1}{V2_2}");
-                    } else { // bths
-                        AddPhoneme(phonemes, $"{C}{V1}");
-                        AddPhoneme(phonemes, $"{V1_1}{V2_2}", ViTri);
-                    }
-                }
-                // 3 âm VVV/VVC chia 2 nốt, ví dụ: "yên" "ướt"
-            } else if (dem == 3 && !tontaiC && !fry) {
-                // 3 âm VVV/VVC chia 2 nốt, ví dụ: "yên" "ướt"
-                string V1 = loi.Substring(0, 1);
-                string VVC = loi.Substring(0);
-                string C = loi.Substring(2);
-                V1 = DecodeVinaConsonants(V1);
-                VVC = DecodeVinaConsonants(VVC);
-                C = DecodeVinaConsonants(C);
-                string prefix = isFirstNote ? "" : "- ";
-                // Bug #7: Thêm xử lý ApDungNguyenTacRieng cho nhánh 3 âm không C
-                // Dùng strictToneShift=true để chỉ đè âm cuối (C), giữ nguyên VVC
-                string dummyVVC = VVC;
-                ApDungNguyenTacRieng(loi, VVC, ref dummyVVC, ref dummyVVC, ref C, strictToneShift: true);
-                if (NoNext && tontaiCcuoi) {
-                    AddPhoneme(phonemes, $"{prefix}{V1}");
-                    AddPhoneme(phonemes, $"{VVC}", ViTri);
-                } else if (NoNext) {
-                    AddPhoneme(phonemes, $"{prefix}{V1}");
-                    AddPhoneme(phonemes, $"{VVC}", ViTri);
-                    AddPhoneme(phonemes, $"{C} -", End);
-                } else {
-                    AddPhoneme(phonemes, $"{prefix}{V1}");
-                    AddPhoneme(phonemes, $"{VVC}", ViTri);
-                }
-            } else if (isFirstNote) {
-                // 4 âm VVVC có VVC liền, chia 3 nốt, ví dụ "uyết" "uyên"
-                if (!fry) {
-                    string V1 = loi.Substring(0, 1);
-                    string V2 = loi.Substring(1, 1);
-                    string VVC = loi.Substring(1);
-                    string C = loi.Substring(3);
-                    if (V1 == "u") V1 = "w";
+                } else if (dem == 3) {
+                    string C = note.lyric.Substring(0, 1);
+                    string V1 = note.lyric.Substring(1, 1);
+                    string V2 = note.lyric.Substring(2, 1);
                     V1 = DecodeVinaConsonants(V1);
                     V2 = DecodeVinaConsonants(V2);
-                    VVC = DecodeVinaConsonants(VVC);
-                    C = DecodeVinaConsonants(C);
+                    if (wV) { V1 = "w"; }
+                    string N = V2;
+                    ApDungNguyenTacRieng(loi, V1 + V2, ref V2, ref V2, ref N, strictToneShift: true);
 
-                    // isFirstNote == true ở nhánh này, hasVCP luôn false
-                    if (NoNext && tontaiCcuoi) {
-                        AddPhoneme(phonemes, $"- {V1}{V2}");
-                        AddPhoneme(phonemes, $"{VVC}", ViTri);
+                    if (tontaiCcuoi) {
+                        if (!isFirstNote && !hasPrefixVCP) {
+                            AddPhoneme(phonemes, $"{vow}{C}", VCP);
+                            AddPhoneme(phonemes, $"{C}{V1}");
+                        } else {
+                            AddPhoneme(phonemes, $"- {C}{V1}");
+                        }
+                        AddPhoneme(phonemes, $"{V1}{V2}", ViTri);
                     } else if (NoNext) {
-                        AddPhoneme(phonemes, $"- {V1}{V2}");
-                        AddPhoneme(phonemes, $"{VVC}", ViTri);
-                        AddPhoneme(phonemes, $"{C} -", End);
-                    } else {
-                        AddPhoneme(phonemes, $"- {V1}{V2}");
-                        AddPhoneme(phonemes, $"{VVC}", ViTri);
-                    }
-                }
-                // 4 âm CVVC/CVVV, chia 3 nốt, ví dụ "thoát" "toan" "toại"
-                if (!tontaiVVC && !fry) {
-                    string C = loi.Substring(0, 1);
-                    string Cw = C;
-                    string V1 = loi.Substring(1, 1);
-                    string V2 = loi.Substring(2, 1);
-                    string V2_2 = V2;
-                    string VC = loi.Substring(2);
-                    string N = loi.Substring(3);
-                    string N_ = N;
-                    if (V1 == "u") V1 = "w";
-                    if (wV && _Cw) {
-                        Cw = C + "w";
-                        V1 = "w";
-                    } else if (wV)
-                        V1 = "w";
-                    if (V1 == "i")
-                        Cw = C + "y";
-                    if (V2 == "ă") V2_2 = "ae";
-                    if (!isFirstNote && V2 == "â") V2 = "@";
-                    C = DecodeVinaConsonants(C);
-                    Cw = DecodeVinaConsonants(Cw);
-                    V1 = DecodeVinaConsonants(V1);
-                    V2_2 = DecodeVinaConsonants(V2_2);
-                    V2 = DecodeVinaConsonants(V2);
-                    VC = DecodeVinaConsonants(VC);
-                    N = DecodeVinaConsonants(N);
-                    N_ = DecodeVinaConsonants(N_);
-
-                    ApDungNguyenTacRieng(loi, V1 + V2, ref V2, ref V2_2, ref N, strictToneShift: true);
-                    N_ = N;
-
-                    // isFirstNote == true ở nhánh này
-                    bool noVCP = false; // không bao giờ có NoVCP khi isFirstNote
-
-                    if (_CV && isFirstNote) { C = "- " + C; }
-
-                    string prefixVCP = vow;
-
-                    if (!isFirstNote && noVCP) {
-                        if (tontaiCcuoi) { // có C ngắt
-                            AddPhoneme(phonemes, $"{C}{V1}{V2}");
-                            AddPhoneme(phonemes, $"{VC}", ViTri);
-                        } else if (note.lyric.EndsWith("uân") || note.lyric.EndsWith("uâng")) {
-                            if (wAn == false) {
-                                if (NoNext) {
-                                    if (loi.StartsWith(".")) {
-                                        AddPhoneme(phonemes, $"{C}w@");
-                                        AddPhoneme(phonemes, $"A{N}", ViTri);
-                                        AddPhoneme(phonemes, $"{N_} -", End);
-                                    } else {
-                                        AddPhoneme(phonemes, $"{C}wA{N}");
-                                        AddPhoneme(phonemes, $"{N_} -", End);
-                                    }
-                                } else {
-                                    if (loi.StartsWith(".")) {
-                                        AddPhoneme(phonemes, $"{C}w@");
-                                        AddPhoneme(phonemes, $"A{N}", ViTri);
-                                    } else {
-                                        AddPhoneme(phonemes, $"{C}wA{N}");
-                                    }
-                                }
-                            } else { // khuân luân
-                                if (NoNext) {
-                                    AddPhoneme(phonemes, $"{C}w");
-                                    AddPhoneme(phonemes, $"w@", Long);
-                                    AddPhoneme(phonemes, $"A{N}", Medium);
-                                    AddPhoneme(phonemes, $"{N_} -", End);
-                                } else {
-                                    AddPhoneme(phonemes, $"{C}w");
-                                    AddPhoneme(phonemes, $"w@", Long);
-                                    AddPhoneme(phonemes, $"A{N}", Medium);
-                                }
+                        if (VV_) {
+                            if (!isFirstNote && !hasPrefixVCP) {
+                                AddPhoneme(phonemes, $"{vow}{C}", VCP);
+                                AddPhoneme(phonemes, $"{C}{V1}");
+                            } else {
+                                AddPhoneme(phonemes, $"- {C}{V1}");
                             }
-                        } else if (NoNext) {
-                            if (VV_) {
+                            AddPhoneme(phonemes, $"{V1}{V2} -", End);
+                        } else if (wV) {
+                            if (!isFirstNote && !hasPrefixVCP) {
+                                AddPhoneme(phonemes, $"{vow}{C}", VCP);
                                 AddPhoneme(phonemes, $"{C}{V1}{V2}");
-                                AddPhoneme(phonemes, $"{V2}{N} -", End);
-                            } else { // ko có VV -
-                                AddPhoneme(phonemes, $"{C}{V1}{V2}");
-                                AddPhoneme(phonemes, $"{V2_2}{N}", ViTri);
-                                AddPhoneme(phonemes, $"{N} -", End);
-                            }
-                        } else {
-                            if (VV_) {
-                                AddPhoneme(phonemes, $"{V2}{N}", ViTri);
-                            } else { // ko có VV -
-                                AddPhoneme(phonemes, $"{C}{V1}{V2}");
-                                AddPhoneme(phonemes, $"{V2_2}{N}", ViTri);
-                            }
-                        }
-                    } else { // isFirstNote OR (!isFirstNote && hasVCP)
-                        if (tontaiCcuoi) { // có C ngắt
-                            if (_C) {
-                                AddPhoneme(phonemes, isFirstNote ? $"- {Cw}" : $"{prefixVCP}{Cw}", VCP);
-                                AddPhoneme(phonemes, $"{C}{V1}{V2}");
-                                AddPhoneme(phonemes, $"{VC}", ViTri);
                             } else {
-                                AddPhoneme(phonemes, $"{C}{V1}{V2}");
-                                AddPhoneme(phonemes, $"{VC}", ViTri);
+                                AddPhoneme(phonemes, $"- {C}{V1}{V2}");
                             }
-                        } else if (note.lyric.EndsWith("uân") || note.lyric.EndsWith("uâng")) {
-                            if (wAn == false) {
-                                if (NoNext) {
-                                    if (loi.StartsWith(".")) {
-                                        if (!isFirstNote && _C) AddPhoneme(phonemes, prefixVCP, VCP);
-                                        AddPhoneme(phonemes, $"{C}w@");
-                                        AddPhoneme(phonemes, isFirstNote ? $"A{N}" : $"A{N}", ViTri); // Kept same for now
-                                        AddPhoneme(phonemes, $"{N_} -", End);
-                                    } else if (_C) {
-                                        AddPhoneme(phonemes, isFirstNote ? $"- {Cw}" : $"{prefixVCP}{Cw}", VCP);
-                                        AddPhoneme(phonemes, isFirstNote ? $"{C}wA{N}" : $"{C}wA{N}"); // Kept same for now
-                                        AddPhoneme(phonemes, $"{N_} -", End);
-                                    } else {
-                                        AddPhoneme(phonemes, $"{C}wA{N}");
-                                        AddPhoneme(phonemes, $"{N_} -", End);
-                                    }
-                                } else { //
-                                    if (loi.StartsWith(".")) {
-                                        if (!isFirstNote && _C) AddPhoneme(phonemes, prefixVCP, VCP);
-                                        AddPhoneme(phonemes, $"{C}w@");
-                                        AddPhoneme(phonemes, $"A{N}", ViTri);
-                                    } else if (_C) {
-                                        AddPhoneme(phonemes, isFirstNote ? $"- {Cw}" : $"{prefixVCP}{Cw}", VCP);
-                                        AddPhoneme(phonemes, $"{C}wA{N}");
-                                    } else
-                                        AddPhoneme(phonemes, $"{C}wA{N}");
-                                }
-                            } else { // khuân luân
-                                if (NoNext) {
-                                    if (_C) {
-                                        AddPhoneme(phonemes, isFirstNote ? $"- {Cw}" : $"{prefixVCP}{Cw}", VCP);
-                                        AddPhoneme(phonemes, $"{C}w");
-                                        AddPhoneme(phonemes, isFirstNote ? $"_w@" : $"_w@", Long);
-                                        AddPhoneme(phonemes, $"A{N}", Medium);
-                                        AddPhoneme(phonemes, $"{N_} -", End);
-                                    } else {
-                                        AddPhoneme(phonemes, $"{C}w");
-                                        AddPhoneme(phonemes, $"_w@", Long);
-                                        AddPhoneme(phonemes, $"A{N}", Medium);
-                                        AddPhoneme(phonemes, $"{N_} -", End);
-                                    }
-                                } else { //
-                                    if (_C) {
-                                        AddPhoneme(phonemes, isFirstNote ? $"- {Cw}" : $"{prefixVCP}{Cw}", VCP);
-                                        AddPhoneme(phonemes, $"{C}w");
-                                        AddPhoneme(phonemes, $"_w@", Long);
-                                        AddPhoneme(phonemes, $"A{N}", Medium);
-                                    } else {
-                                        AddPhoneme(phonemes, $"{C}w");
-                                        AddPhoneme(phonemes, $"_w@", Long);
-                                        AddPhoneme(phonemes, $"A{N}", Medium);
-                                    }
-                                }
-                            }
-                        } else if (NoNext) {
-                            if (VV_) {
-                                if (_C) {
-                                    AddPhoneme(phonemes, isFirstNote ? $"- {Cw}" : $"{prefixVCP}{Cw}", VCP);
-                                    AddPhoneme(phonemes, $"{C}{V1}{V2}");
-                                    AddPhoneme(phonemes, isFirstNote ? $"{V2}{N_} -" : $"{V2}{N_} -", End);
-                                } else {
-                                    AddPhoneme(phonemes, $"{C}{V1}{V2}");
-                                    AddPhoneme(phonemes, isFirstNote ? $"{V2}{N_} -" : $"{V2_2}{N}", End); // else-branch NoVCP logic check handled above
-                                }
-                            } else { // ko có VV -
-                                if (_C) {
-                                    AddPhoneme(phonemes, isFirstNote ? $"- {Cw}" : $"{prefixVCP}{Cw}", VCP);
-                                    AddPhoneme(phonemes, $"{C}{V1}{V2}");
-                                    AddPhoneme(phonemes, $"{V2_2}{N}", ViTri);
-                                    AddPhoneme(phonemes, $"{N_} -", End);
-                                } else {
-                                    AddPhoneme(phonemes, $"{C}{V1}{V2}");
-                                    AddPhoneme(phonemes, $"{V2_2}{N}", ViTri);
-                                    AddPhoneme(phonemes, $"{N_} -", End);
-                                }
-                            }
+                            AddPhoneme(phonemes, $"{V2} -", End);
                         } else {
-                            if (VV_) {
-                                if (_C) {
-                                    AddPhoneme(phonemes, isFirstNote ? $"- {Cw}" : prefixVCP, VCP);
-                                    AddPhoneme(phonemes, $"{C}{V1}{V2}");
-                                    AddPhoneme(phonemes, $"{V2}{N}", ViTri);
-                                } else {
-                                    AddPhoneme(phonemes, $"{C}{V1}{V2}");
-                                    AddPhoneme(phonemes, $"{V2}{N}", ViTri);
-                                }
-                            } else { // ko có VV -
-                                if (_C) {
-                                    AddPhoneme(phonemes, isFirstNote ? $"- {Cw}" : prefixVCP, VCP);
-                                    AddPhoneme(phonemes, $"{C}{V1}{V2}");
-                                    AddPhoneme(phonemes, $"{V2_2}{N}", ViTri);
-                                } else {
-                                    AddPhoneme(phonemes, $"{C}{V1}{V2}");
-                                    AddPhoneme(phonemes, $"{V2_2}{N}", ViTri);
-                                }
-                            }
-                        }
-                    }
-                }
-                // 4 âm CVVC/CVVV, (tiên, tiết)
-                if (!fry && dem == 4 && tontaiVVC && tontaiC) {
-                    string C = loi.Substring(0, 1);
-                    string Cw = C;
-                    string V1 = loi.Substring(1, 1);
-                    string VVC = loi.Substring(1);
-                    string N = loi.Substring(3);
-                    if (V1 == "i" && _Cw) {
-                        Cw = C + "y";
-                    }
-                    C = DecodeVinaConsonants(C);
-                    Cw = DecodeVinaConsonants(Cw);
-                    V1 = DecodeVinaConsonants(V1);
-                    VVC = DecodeVinaConsonants(VVC);
-                    N = DecodeVinaConsonants(N);
-                    string dummy = VVC; // Biến rác, do hàm dưới yêu cầu đủ 3 tham số
-                    ApDungNguyenTacRieng(loi, VVC, ref VVC, ref dummy, ref N);
-
-                    // isFirstNote == true ở nhánh này
-                    string prefixVCP = vow;
-
-                    if (_CV && isFirstNote) { C = "- " + C; } else if (_CV && !isFirstNote && prevtontaiCcuoi) { C = "- " + C; }
-
-                    bool noVCP = false; // không bao giờ có NoVCP khi isFirstNote
-
-                    if (!isFirstNote && noVCP) {
-                        if (tontaiCcuoi) { // có C ngắt
-                            AddPhoneme(phonemes, $"{C}{V1}");
-                            AddPhoneme(phonemes, $"{VVC}", ViTri);
-                        } else if (NoNext) { // ko có note kế tiếp
-                            AddPhoneme(phonemes, $"{C}{V1}");
-                            AddPhoneme(phonemes, $"{VVC}", ViTri);
-                            AddPhoneme(phonemes, $"{N} -", End);
-                        } else { // có note kế tiếp
-                            AddPhoneme(phonemes, $"{C}{V1}");
-                            AddPhoneme(phonemes, $"{VVC}", ViTri);
-                        }
-                    } else {
-                        if (tontaiCcuoi) { // có C ngắt
-                            if (_C) {
-                                AddPhoneme(phonemes, isFirstNote ? $"- {Cw}" : $"{vow}{Cw}", VCP); // Added vow space logic from else
-                                AddPhoneme(phonemes, $"{C}{V1}");
-                                AddPhoneme(phonemes, $"{VVC}", ViTri);
-                            } else {
-                                AddPhoneme(phonemes, $"{C}{V1}");
-                                AddPhoneme(phonemes, $"{VVC}", ViTri);
-                            }
-                        } else if (NoNext) { // ko có note kế tiếp
-                            if (_C) {
-                                AddPhoneme(phonemes, isFirstNote ? $"- {Cw}" : $"{vow}{Cw}", VCP);
-                                AddPhoneme(phonemes, $"{C}{V1}");
-                                AddPhoneme(phonemes, $"{VVC}", ViTri);
-                                AddPhoneme(phonemes, $"{N} -", End);
-                            } else {
-                                AddPhoneme(phonemes, $"{C}{V1}");
-                                AddPhoneme(phonemes, $"{VVC}", ViTri);
-                                AddPhoneme(phonemes, $"{N} -", End);
-                            }
-                        } else { // có note kế tiếp
-                            if (_C) {
-                                AddPhoneme(phonemes, isFirstNote ? $"- {Cw}" : $"{vow}{Cw}", VCP);
-                                AddPhoneme(phonemes, $"{C}{V1}");
-                                AddPhoneme(phonemes, $"{VVC}", ViTri);
-                            } else {
-                                AddPhoneme(phonemes, $"{C}{V1}");
-                                AddPhoneme(phonemes, $"{VVC}", ViTri);
-                            }
-                        }
-                    }
-                }
-                // 5 âm CVVVC, có VVC liền, chia 3 nốt, ví dụ "thuyết"
-                if (!fry) {
-                    string C = loi.Substring(0, 1);
-                    string Cw = C;
-                    string V1 = loi.Substring(1, 1);
-                    string V2 = loi.Substring(2, 1);
-                    string VVC = loi.Substring(2);
-                    string N = loi.Substring(4);
-                    if (wV && _Cw) {
-                        Cw = C + "w";
-                        V1 = "w";
-                    } else if (wV)
-                        V1 = "w";
-                    if (V1 == "i")
-                        Cw = C + "y";
-                    C = DecodeVinaConsonants(C);
-                    Cw = DecodeVinaConsonants(Cw);
-                    V1 = DecodeVinaConsonants(V1);
-                    V2 = DecodeVinaConsonants(V2);
-                    VVC = DecodeVinaConsonants(VVC);
-                    N = DecodeVinaConsonants(N);
-                    if (_CV) { C = "- " + C; }
-                    if (tontaiCcuoi) { // có C ngắt
-                        if (_C) {
-                            AddPhoneme(phonemes, $"- {Cw}", VCP);
-                            AddPhoneme(phonemes, $"{C}{V1}{V2}");
-                            AddPhoneme(phonemes, $"{VVC}", ViTri);
-                        } else {
-                            AddPhoneme(phonemes, $"{C}{V1}{V2}");
-                            AddPhoneme(phonemes, $"{VVC}", ViTri);
-                        }
-                    } else if (NoNext) { // không có nốt kế tiếp
-                        if (_C) {
-                            AddPhoneme(phonemes, $"- {Cw}", VCP);
-                            AddPhoneme(phonemes, $"{C}{V1}{V2}");
-                            AddPhoneme(phonemes, $"{VVC}", ViTri);
-                            AddPhoneme(phonemes, $"{N} -", End);
-                        } else {
-                            AddPhoneme(phonemes, $"{C}{V1}{V2}");
-                            AddPhoneme(phonemes, $"{VVC}", ViTri);
-                            AddPhoneme(phonemes, $"{N} -", End);
-                        }
-                    } else { // có note kế tiếp
-                        if (_C) {
-                            AddPhoneme(phonemes, $"- {Cw}", VCP);
-                            AddPhoneme(phonemes, $"{C}{V1}{V2}");
-                            AddPhoneme(phonemes, $"{VVC}", ViTri);
-                        } else {
-                            AddPhoneme(phonemes, $"{C}{V1}{V2}");
-                            AddPhoneme(phonemes, $"{VVC}", ViTri);
-                        }
-                    }
-                }
-                if (BR) {
-                    string num = loi.Substring(5);
-                    if (num == "") {
-                        num = "1";
-                    }
-                    // isFirstNote: vow == "-", không cần thêm vow trước breath
-                    AddPhoneme(phonemes, $"breath{num}");
-                }
-                // phụ âm y
-                if (note.lyric.StartsWith("y") && koVVCchia) {
-                    // Tính VCP prefix cho !isFirstNote using existing variables
-                    bool hasPrefixVCP_y = prevtontaiCcuoi; // C trước → dùng "- y" prefix
-                    string vow_y = vow;
-                    if (dem == 2) { // ya
-                        string C = note.lyric.Substring(0, 1);
-                        string V = note.lyric.Substring(1, 1);
-                        V = DecodeVinaConsonants(V);
-                        if (isFirstNote || hasPrefixVCP_y) {
-                            // prefix là "- y" hoặc "- y" (khi có C trước)
-                            if (NoNext) {
-                                AddPhoneme(phonemes, $"- {C}{V}");
-                                AddPhoneme(phonemes, $"{V} -", ViTri);
-                            } else {
-                                AddPhoneme(phonemes, $"- {C}{V}");
-                            }
-                        } else {
-                            // !isFirstNote, không có VCP — dùng vow
-                            string vowY = vow_y + " ";
-                            if (NoNext) {
-                                AddPhoneme(phonemes, $"{vowY}{C}", VCP);
-                                AddPhoneme(phonemes, $"{C}{V}");
-                                AddPhoneme(phonemes, $"{V} -", End);
-                            } else {
-                                AddPhoneme(phonemes, $"{vowY}{C}", VCP);
-                                AddPhoneme(phonemes, $"{C}{V}");
-                            }
-                        }
-                    } else if (dem == 3) {
-                        string C = note.lyric.Substring(0, 1);
-                        string V1 = note.lyric.Substring(1, 1);
-                        string V2 = note.lyric.Substring(2, 1);
-                        V1 = DecodeVinaConsonants(V1);
-                        V2 = DecodeVinaConsonants(V2);
-                        if (wV) { V1 = "w"; }
-                        string N = V2;
-                        ApDungNguyenTacRieng(loi, V1 + V2, ref V2, ref V2, ref N, strictToneShift: true);
-                        string vowY3 = isFirstNote || hasPrefixVCP_y ? string.Empty : (vow_y + " ");
-                        if (tontaiCcuoi) {
-                            if (!isFirstNote && !hasPrefixVCP_y) {
-                                AddPhoneme(phonemes, $"{vowY3}{C}", VCP);
+                            if (!isFirstNote && !hasPrefixVCP) {
+                                AddPhoneme(phonemes, $"{vow}{C}", VCP);
                                 AddPhoneme(phonemes, $"{C}{V1}");
                             } else {
                                 AddPhoneme(phonemes, $"- {C}{V1}");
                             }
                             AddPhoneme(phonemes, $"{V1}{V2}", ViTri);
-                        } else if (NoNext) {
-                            if (VV_) {
-                                if (!isFirstNote && !hasPrefixVCP_y) {
-                                    AddPhoneme(phonemes, $"{vowY3}{C}", VCP);
-                                    AddPhoneme(phonemes, $"{C}{V1}");
-                                } else {
-                                    AddPhoneme(phonemes, $"- {C}{V1}");
-                                }
-                                AddPhoneme(phonemes, $"{V1}{V2} -", End);
-                            } else if (wV) {
-                                if (!isFirstNote && !hasPrefixVCP_y) {
-                                    AddPhoneme(phonemes, $"{vowY3}{C}", VCP);
-                                    AddPhoneme(phonemes, $"{C}{V1}{V2}");
-                                } else {
-                                    AddPhoneme(phonemes, $"- {C}{V1}{V2}");
-                                }
-                                AddPhoneme(phonemes, $"{V2} -", End);
-                            } else {
-                                if (!isFirstNote && !hasPrefixVCP_y) {
-                                    AddPhoneme(phonemes, $"{vowY3}{C}", VCP);
-                                    AddPhoneme(phonemes, $"{C}{V1}");
-                                } else {
-                                    AddPhoneme(phonemes, $"- {C}{V1}");
-                                }
-                                AddPhoneme(phonemes, $"{V1}{V2}", ViTri);
-                                AddPhoneme(phonemes, $"{V2} -", End);
-                            }
-                        } else { // có note kế tiếp
-                            if (wV) {
-                                if (!isFirstNote && !hasPrefixVCP_y) {
-                                    AddPhoneme(phonemes, $"{vowY3}{C}", VCP);
-                                    AddPhoneme(phonemes, $"{C}{V1}{V2}");
-                                } else {
-                                    AddPhoneme(phonemes, $"- {C}{V1}{V2}");
-                                }
-                            } else {
-                                if (!isFirstNote && !hasPrefixVCP_y) {
-                                    AddPhoneme(phonemes, $"{vowY3}{C}", VCP);
-                                    AddPhoneme(phonemes, $"{C}{V1}");
-                                } else {
-                                    AddPhoneme(phonemes, $"- {C}{V1}");
-                                }
-                                AddPhoneme(phonemes, $"{V1}{V2}", ViTri);
-                            }
+                            AddPhoneme(phonemes, $"{V2} -", End);
                         }
-                    }
-                } // phụ âm y
-                else { // nếu ko phải phụ âm y
-                       // 2 âm VV, ví dụ: "oa"
-                    if (!fry && dem == 2 && kocoC) {
-                        string V1 = loi.Substring(0, 1);
-                        string V1_ = V1;
-                        string V2 = loi.Substring(1, 1);
-                        string N = V2;
-                        if (loi.StartsWith("uy")) V2 = "i";
-                        if (IsN0Coda(V1 + V2)) {
-                            N = "ng0";
-                        }
-                        if (V2 == "y")
-                            N = "i";
+                    } else { // có note kế tiếp
                         if (wV) {
-                            V1 = "w";
-                        }
-                        if (V1 == "â") {
-                            V1 = "@";
-                        }
-                        if (V1 + V2 == "ia" || V1 + V2 == "ua" || V1 + V2 == "ưa")
-                            N = "@";
-                        if (V1 == "ă") {
-                            V1_ = "ae";
-                        }
-                        V1 = DecodeVinaConsonants(V1);
-                        V1_ = DecodeVinaConsonants(V1_);
-                        V2 = DecodeVinaConsonants(V2);
-                        N = DecodeVinaConsonants(N);
-
-                        string dummy = V2;
-                        ApDungNguyenTacRieng(loi, V1 + V2, ref V2, ref dummy, ref N, strictToneShift: true);
-                        if (tontaiCcuoi) {
-                            AddPhoneme(phonemes, $"- {V1}");
+                            if (!isFirstNote && !hasPrefixVCP) {
+                                AddPhoneme(phonemes, $"{vow}{C}", VCP);
+                                AddPhoneme(phonemes, $"{C}{V1}{V2}");
+                            } else {
+                                AddPhoneme(phonemes, $"- {C}{V1}{V2}");
+                            }
+                        } else {
+                            if (!isFirstNote && !hasPrefixVCP) {
+                                AddPhoneme(phonemes, $"{vow}{C}", VCP);
+                                AddPhoneme(phonemes, $"{C}{V1}");
+                            } else {
+                                AddPhoneme(phonemes, $"- {C}{V1}");
+                            }
                             AddPhoneme(phonemes, $"{V1}{V2}", ViTri);
-                        } else if (NoNext) { // không có nốt kế tiếp
-                            if (wV) { // oa oe uê ,...
-                                AddPhoneme(phonemes, $"- {V1}{V2}");
-                                AddPhoneme(phonemes, $"{N} -", End);
-                            } else if (VV_) { // ai eo êu ao,...
-                                AddPhoneme(phonemes, $"- {V1}");
-                                AddPhoneme(phonemes, $"{V1}{N} -", End);
-                            } else { // an anh
-                                AddPhoneme(phonemes, $"- {V1}");
-                                AddPhoneme(phonemes, $"{V1_}{V2}", ViTri);
-                                AddPhoneme(phonemes, $"{N} -", End);
-                            }
-                        } else {  // có nốt kế tiếp
-                            if (wV) { // oa oe uê ,...
-                                AddPhoneme(phonemes, $"- {V1}{V2}");
-                            } else if (VV_) { // ai eo êu ao,...
-                                AddPhoneme(phonemes, $"- {V1}");
-                                AddPhoneme(phonemes, $"{V1}{N}", ViTri);
-                            } else { // an anh
-                                AddPhoneme(phonemes, $"- {V1}");
-                                AddPhoneme(phonemes, $"{V1_}{V2}", ViTri);
-                            }
-                        }
-                    }
-                    // 3 âm VVC/VVV, ví dụ: "oát" "oan" "oai"
-                    if (!fry && dem == 3 && koVVCchia && kocoC) {
-                        string V1 = loi.Substring(0, 1);
-                        string V2 = loi.Substring(1, 1);
-                        string V2_2 = V2;
-                        string V3 = loi.Substring(2, 1);
-                        V2 = DecodeVinaConsonants(V2);
-                        V2_2 = DecodeVinaConsonants(V2_2);
-                        V3 = DecodeVinaConsonants(V3);
-                        string N = V3;
-                        ApDungNguyenTacRieng(loi, V2 + V3, ref V2, ref V2_2, ref N);
-
-                        if (V3 == "y") N = "i";
-                        if (tontaiCcuoi && wV) {
-                            AddPhoneme(phonemes, $"- {V1}{V2}");
-                            AddPhoneme(phonemes, $"{V2}{V3}", ViTri);
-                        } else if (NoNext) { // không có nốt kế tiếp
-                            if (wV && VV_) {
-                                AddPhoneme(phonemes, $"- {V1}{V2}");
-                                AddPhoneme(phonemes, $"{V2_2}{N} -", End);
-                            } else if (wV) {
-                                AddPhoneme(phonemes, $"- {V1}{V2}");
-                                AddPhoneme(phonemes, $"{V2_2}{V3}", ViTri);
-                                AddPhoneme(phonemes, $"{N} -", End);
-                            }
-                        } else { // có nốt kế tiếp
-                            if (wV) {
-                                AddPhoneme(phonemes, $"- {V1}{V2}");
-                                AddPhoneme(phonemes, $"{V2_2}{V3}", ViTri);
-                            }
                         }
                     }
                 }
             } else {
-                // 4 âm VVVC có VVC liền, chia 3 nốt, ví dụ "uyết" "uyên"
-                if (!fry) {
-                    string V1 = loi.Substring(0, 1);
-                    string V2 = loi.Substring(1, 1);
-                    string VVC = loi.Substring(1);
-                    string C = loi.Substring(3);
-                    if (V1 == "u") V1 = "w";
-                    V1 = DecodeVinaConsonants(V1);
-                    V2 = DecodeVinaConsonants(V2);
-                    VVC = DecodeVinaConsonants(VVC);
-                    C = DecodeVinaConsonants(C);
-                    if (prevtontaiCcuoi) vow = "."; else vow += " ";
-                    if (prevtontaiCcuoi) {
-                        if (tontaiCcuoi) {
-                            AddPhoneme(phonemes, $"{vow}{V1}{V2}");
-                            AddPhoneme(phonemes, $"{VVC}", ViTri);
-                        } else if (NoNext) {
-                            AddPhoneme(phonemes, $"{vow}{V1}{V2}");
-                            AddPhoneme(phonemes, $"{VVC}", ViTri);
-                            AddPhoneme(phonemes, $"{C} -", End);
-                        } else {
-                            AddPhoneme(phonemes, $"{vow}{V1}{V2}");
-                            AddPhoneme(phonemes, $"{VVC}", ViTri);
+                switch (dem) {
+                    case 1: {
+                            // 1 âm
+                            string N = loi;
+                            N = DecodeVinaConsonants(N);
+                            string N2 = N;
+                            if (!isFirstNote) {
+                                bool A = vow == "o" || vow == "O" || vow == "u";
+                                if (A && loi == "ng") N2 = "ng0";
+                                if (!IsNasalLetter(loi)) {
+                                    vow += " ";
+                                }
+                                if (IsNasalLetter(loi) && prevtontaiCcuoi) { vow = "- "; } else if (prevtontaiCcuoi)
+                                    vow = ".";
+                            }
+                            string onsetPrefix = isFirstNote ? "- " : vow;
+
+                            if (NoNext) {
+                                AddPhoneme(phonemes, $"{onsetPrefix}{N}");
+                                AddPhoneme(phonemes, $"{N2} -", End);
+                            } else {
+                                AddPhoneme(phonemes, $"{onsetPrefix}{N}");
+                            }
                         }
-                    } else if (NoNext && tontaiCcuoi) {
-                        AddPhoneme(phonemes, $"{vow}{V1}", VCP);
-                        AddPhoneme(phonemes, $"{V1}{V2}");
-                        AddPhoneme(phonemes, $"{VVC}", ViTri);
-                    } else if (NoNext) {
-                        AddPhoneme(phonemes, $"{vow}{V1}", VCP);
-                        AddPhoneme(phonemes, $"{V1}{V2}");
-                        AddPhoneme(phonemes, $"{VVC}", ViTri);
-                        AddPhoneme(phonemes, $"{C} -", End);
-                    } else {
-                        AddPhoneme(phonemes, $"{vow}{V1}", VCP);
-                        AddPhoneme(phonemes, $"{V1}{V2}");
-                        AddPhoneme(phonemes, $"{VVC}", ViTri);
-                    }
-                }
-                // 4 âm CVVC/CVVV, chia 3 nốt, ví dụ "thoát" "toan" "toại"
-                if (!tontaiVVC && !fry) {
-                    string C = loi.Substring(0, 1);
-                    string Cw = C;
-                    string V1 = loi.Substring(1, 1);
-                    string V2 = loi.Substring(2, 1);
-                    string V2_2 = V2;
-                    string VC = loi.Substring(2);
-                    string N = loi.Substring(3);
-                    string N_ = N;
-                    ApDungNguyenTacRieng(loi, V1 + V2, ref V2, ref V2_2, ref N, strictToneShift: true);
-                    N_ = N;
-                    if (V1 == "u") V1 = "w";
-                    if (wV && _Cw) {
-                        Cw = C + "w";
-                        V1 = "w";
-                    } else if (wV)
-                        V1 = "w";
-                    if (V1 == "i")
-                        Cw = C + "y";
-                    if (V2 == "ă") V2_2 = "ae";
-                    if (V2 == "â") V2 = "@";
-                    C = DecodeVinaConsonants(C);
-                    Cw = DecodeVinaConsonants(Cw);
-                    V1 = DecodeVinaConsonants(V1);
-                    V2_2 = DecodeVinaConsonants(V2_2);
-                    V2 = DecodeVinaConsonants(V2);
-                    VC = DecodeVinaConsonants(VC);
-                    N = DecodeVinaConsonants(N);
-                    N_ = DecodeVinaConsonants(N_);
-                    if (_CV && prevtontaiCcuoi) { N = "- " + N; }
-                    vow += " ";
-                    if (NoVCP) {
-                        if (tontaiCcuoi) { // có C ngắt
-                            AddPhoneme(phonemes, $"{C}{V1}{V2}");
-                            AddPhoneme(phonemes, $"{VC}", ViTri);
-                        } else if (note.lyric.EndsWith("uân") || note.lyric.EndsWith("uâng")) {
-                            if (wAn == false) {
-                                if (NoNext) {
-                                    if (loi.StartsWith(".")) {
-                                        AddPhoneme(phonemes, $"{C}w@");
-                                        AddPhoneme(phonemes, $"A{N}", ViTri);
-                                    } else
-                                        AddPhoneme(phonemes, $"{C}wA{N}");
-                                    AddPhoneme(phonemes, $"{N_} -", End);
-                                } else { //
-                                    if (loi.StartsWith(".")) {
-                                        AddPhoneme(phonemes, $"{C}w@");
-                                        AddPhoneme(phonemes, $"A{N}", ViTri);
-                                    } else {
-                                        AddPhoneme(phonemes, $"{C}wA{N}");
+                        break;
+                    case 2:
+                        if (tontaiC) {
+                            // 2 âm CV, ví dụ: "ba"
+                            string N = loi;
+                            string N1 = loi.Substring(0, 1);
+                            string N2 = loi.Substring(1, 1);
+                            N1 = DecodeVinaConsonants(N1);
+                            if (_Cw) {
+                                if (N2 == "u") N1 = N1 + "w";
+                                if ((N2 == "i") || (N2 == "y")) N1 = N1 + "y";
+                            }
+                            N = DecodeVinaConsonants(N);
+                            N2 = DecodeVinaConsonants(N2);
+
+                            if (_CV && (isFirstNote || prevtontaiCcuoi)) { N = "- " + N; }
+                            if (!isFirstNote) vow += " ";
+
+                            bool hasVCP = isFirstNote ? _C : !NoVCP;
+                            string prefixVCP = isFirstNote ? "- " : vow;
+
+                            if (NoNext) {
+                                if (hasVCP) {
+                                    AddPhoneme(phonemes, $"{prefixVCP}{N1}", VCP);
+                                    AddPhoneme(phonemes, $"{N}");
+                                    AddPhoneme(phonemes, $"{N2} -", End);
+                                } else {
+                                    AddPhoneme(phonemes, $"{N}");
+                                    AddPhoneme(phonemes, $"{N2} -", End);
+                                }
+                            } else if (hasVCP) {
+                                AddPhoneme(phonemes, $"{prefixVCP}{N1}", VCP);
+                                AddPhoneme(phonemes, $"{N}");
+                            } else {
+                                AddPhoneme(phonemes, $"{N}");
+                            }
+                        } else if (!fry && kocoC) {
+                            // 2 âm VV, ví dụ: "oa"
+                            string V1 = loi.Substring(0, 1);
+                            string V1_ = V1;
+                            string V2 = loi.Substring(1, 1);
+                            string N = V2;
+                            if (loi.StartsWith("uy")) V2 = "i";
+                            if (IsN0Coda(V1 + V2)) {
+                                N = "ng0";
+                            }
+                            if (V2 == "y")
+                                N = "i";
+                            if (wV) {
+                                V1 = "w";
+                            }
+                            if (V1 == "â") {
+                                V1 = "@";
+                            }
+                            if (V1 + V2 == "ia" || V1 + V2 == "ua" || V1 + V2 == "ưa")
+                                N = "@";
+                            if (V1 == "ă") {
+                                V1_ = "ae";
+                            }
+                            V1 = DecodeVinaConsonants(V1);
+                            V1_ = DecodeVinaConsonants(V1_);
+                            V2 = DecodeVinaConsonants(V2);
+                            N = DecodeVinaConsonants(N);
+
+                            string dummy = V2;
+                            // Sửa bug 4: strictToneShift=false cho 2-âm VV theo code gốc (vì code gốc truyền mặc định)
+                            ApDungNguyenTacRieng(loi, V1 + V2, ref V2, ref dummy, ref N);
+
+                            if (!isFirstNote) {
+                                if (prevtontaiCcuoi) vow = "."; else vow += " ";
+                            }
+
+                            if (!isFirstNote && prevtontaiCcuoi) {
+                                if (tontaiCcuoi) {
+                                    AddPhoneme(phonemes, $"{vow}{V1}");
+                                    AddPhoneme(phonemes, $"{V1}{V2}", ViTri);
+                                } else if (NoNext) { // không có nốt kế tiếp
+                                    if (wV) { // oa oe uê ,...
+                                        AddPhoneme(phonemes, $"{vow}{V1}{V2}");
+                                        AddPhoneme(phonemes, $"{N} -", End);
+                                    } else if (VV_) { // ai eo êu ao,...
+                                        AddPhoneme(phonemes, $"{vow}{V1}");
+                                        AddPhoneme(phonemes, $"{V1}{N} -", End);
+                                    } else { // an anh
+                                        AddPhoneme(phonemes, $"{vow}{V1}");
+                                        AddPhoneme(phonemes, $"{V1_}{V2}", ViTri);
+                                        AddPhoneme(phonemes, $"{N} -", End);
+                                    }
+                                } else {  // có nốt kế tiếp
+                                    if (wV) { // oa oe uê ,...
+                                        AddPhoneme(phonemes, $"{vow}{V1}{V2}");
+                                    } else if (VV_) { // ai eo êu ao,...
+                                        AddPhoneme(phonemes, $"{vow}{V1}");
+                                        AddPhoneme(phonemes, $"{V1}{N}", ViTri);
+                                    } else { // an anh
+                                        AddPhoneme(phonemes, $"{vow}{V1}");
+                                        AddPhoneme(phonemes, $"{V1_}{V2}", ViTri);
                                     }
                                 }
-                            } else { // khuân luân
-                                if (NoNext) {
-                                    AddPhoneme(phonemes, $"{C}w");
-                                    AddPhoneme(phonemes, $"w@", Long);
-                                    AddPhoneme(phonemes, $"A{N}", Medium);
-                                    AddPhoneme(phonemes, $"{N_} -", End);
-                                } else {
-                                    AddPhoneme(phonemes, $"{C}w");
-                                    AddPhoneme(phonemes, $"w@", Long);
-                                    AddPhoneme(phonemes, $"A{N}", Medium);
+                            } else {
+                                string prefixVCP = isFirstNote ? "- " : vow;
+                                if (tontaiCcuoi) {
+                                    AddPhoneme(phonemes, isFirstNote ? $"- {V1}" : $"{prefixVCP}{V1}");
+                                    AddPhoneme(phonemes, $"{V1}{V2}", ViTri);
+                                } else if (NoNext) { // không có nốt kế tiếp
+                                    if (wV) { // oa oe uê ,...
+                                        AddPhoneme(phonemes, isFirstNote ? $"- {V1}{V2}" : $"{prefixVCP}{V1}", isFirstNote ? 0 : VCP);
+                                        if (!isFirstNote) AddPhoneme(phonemes, $"{V1}{V2}");
+                                        AddPhoneme(phonemes, $"{N} -", End);
+                                    } else if (VV_) { // ai eo êu ao,...
+                                        AddPhoneme(phonemes, isFirstNote ? $"- {V1}" : $"{prefixVCP}{V1}");
+                                        AddPhoneme(phonemes, $"{V1}{N} -", End);
+                                    } else { // an anh
+                                        AddPhoneme(phonemes, isFirstNote ? $"- {V1}" : $"{prefixVCP}{V1}");
+                                        AddPhoneme(phonemes, $"{V1_}{V2}", ViTri);
+                                        AddPhoneme(phonemes, $"{N} -", End);
+                                    }
+                                } else {  // có nốt kế tiếp
+                                    if (wV) { // oa oe uê ,...
+                                        AddPhoneme(phonemes, isFirstNote ? $"- {V1}{V2}" : $"{prefixVCP}{V1}", isFirstNote ? 0 : VCP);
+                                        if (!isFirstNote) AddPhoneme(phonemes, $"{V1}{V2}");
+                                    } else if (VV_) { // ai eo êu ao,...
+                                        AddPhoneme(phonemes, isFirstNote ? $"- {V1}" : $"{prefixVCP}{V1}");
+                                        AddPhoneme(phonemes, $"{V1}{N}", ViTri);
+                                    } else { // an anh
+                                        AddPhoneme(phonemes, isFirstNote ? $"- {V1}" : $"{prefixVCP}{V1}");
+                                        AddPhoneme(phonemes, $"{V1_}{V2}", ViTri);
+                                    }
                                 }
                             }
-                        } else if (NoNext) {
-                            if (VV_) {
-                                AddPhoneme(phonemes, $"{C}{V1}{V2}");
-                                AddPhoneme(phonemes, $"{V2}{N} -", End);
-                            } else { // ko có VV -
-                                AddPhoneme(phonemes, $"{C}{V1}{V2}");
-                                AddPhoneme(phonemes, $"{V2_2}{N}", ViTri);
-                                AddPhoneme(phonemes, $"{N} -", End);
-                            }
-                        } else {
-                            if (VV_) {
-                                AddPhoneme(phonemes, $"{C}{V1}{V2}");
-                                AddPhoneme(phonemes, $"{V2}{N}", ViTri);
-                            } else { // ko có VV -
-                                AddPhoneme(phonemes, $"{C}{V1}{V2}");
-                                AddPhoneme(phonemes, $"{V2_2}{N}", ViTri);
-                            }
                         }
-                    } else {
-                        if (tontaiCcuoi) { // có C ngắt
-                            AddPhoneme(phonemes, $"{vow}{Cw}", VCP);
-                            AddPhoneme(phonemes, $"{C}{V1}{V2}");
-                            AddPhoneme(phonemes, $"{VC}", ViTri);
-                        } else {
-                            // Removed redundant !isFirstNote logic for uân/uâng and general VVC
-                        }
-                    }
-                }
-
-                // 4 âm CVVC/CVVV, (tiên, tiết)
-                // 5 âm CVVVC, có VVC liền, chia 3 nốt, ví dụ "thuyết"
-                if (!fry && dem == 5 && tontaiVVC && tontaiC) {
-                    string C = loi.Substring(0, 1);
-                    string Cw = C;
-                    string V1 = loi.Substring(1, 1);
-                    string V2 = loi.Substring(2, 1);
-                    string VVC = loi.Substring(2);
-                    string N = loi.Substring(4);
-                    if (wV && _Cw) {
-                        Cw = C + "w";
-                        V1 = "w";
-                    } else if (wV)
-                        V1 = "w";
-                    if (V1 == "i")
-                        Cw = C + "y";
-                    C = DecodeVinaConsonants(C);
-                    Cw = DecodeVinaConsonants(Cw);
-                    V1 = DecodeVinaConsonants(V1);
-                    V2 = DecodeVinaConsonants(V2);
-                    VVC = DecodeVinaConsonants(VVC);
-                    N = DecodeVinaConsonants(N);
-                    string dummy = VVC;
-                    ApDungNguyenTacRieng(loi, V1 + V2, ref VVC, ref dummy, ref N);
-
-                    // BUGFIX: Không gọi lại TinhToanAmChuyenTiep với tham số sai.
-                    // Các biến vow / NoVCP / prevtontaiCcuoi đã được tính ở đầu Process().
-                    bool hasVCP = !NoVCP;
-                    bool hasPrefixVCP = prevtontaiCcuoi;
-
-                    string prefixVCP = hasPrefixVCP ? "- " : vow;
-                    bool noVCP = !hasVCP && !isFirstNote;
-
-                    if (!isFirstNote && noVCP) {
-                        if (tontaiCcuoi) { // có C ngắt
-                            AddPhoneme(phonemes, $"{C}{V1}{V2}");
-                            AddPhoneme(phonemes, $"{VVC}", ViTri);
-                        } else if (NoNext) { // ko có note kế tiếp
-                            AddPhoneme(phonemes, $"{C}{V1}{V2}");
-                            AddPhoneme(phonemes, $"{VVC}", ViTri);
-                            AddPhoneme(phonemes, $"{N} -", End);
-                        } else { // có note kế tiếp
-                            AddPhoneme(phonemes, $"{C}{V1}{V2}");
-                            AddPhoneme(phonemes, $"{VVC}", ViTri);
-                        }
-                    } else {
-                        if (tontaiCcuoi) { // có C ngắt
-                            AddPhoneme(phonemes, isFirstNote ? $"- {Cw}" : $"{vow}{Cw}", VCP); // Added vow logic from else
-                            AddPhoneme(phonemes, $"{C}{V1}{V2}");
-                            AddPhoneme(phonemes, $"{VVC}", ViTri);
-                        } else if (NoNext) { // ko có note kế tiếp
-                            AddPhoneme(phonemes, isFirstNote ? $"- {Cw}" : $"{vow}{Cw}", VCP);
-                            AddPhoneme(phonemes, $"{C}{V1}{V2}");
-                            AddPhoneme(phonemes, $"{VVC}", ViTri);
-                            AddPhoneme(phonemes, $"{N} -", End);
-                        } else { // có note kế tiếp
-                            AddPhoneme(phonemes, isFirstNote ? $"- {Cw}" : $"{vow}{Cw}", VCP);
-                            AddPhoneme(phonemes, $"{C}{V1}{V2}");
-                            AddPhoneme(phonemes, $"{VVC}", ViTri);
-                        }
-                    }
-                } // end CVVC/CVVVC thuyết block
-                  // Xử lý VV, VVC, VVVC (không đi vào phụ âm y)
-                  // nếu ko phải phụ âm y (trong !isFirstNote)
-                  // 2 âm VV, ví dụ: "oa"
-                if (!fry && dem == 2 && kocoC) {
-                    string V1 = loi.Substring(0, 1);
-                    string V1_ = V1;
-                    string V2 = loi.Substring(1, 1);
-                    string N = V2;
-                    if (loi.StartsWith("uy")) V2 = "i";
-                    if (IsN0Coda(V1 + V2)) {
-                        N = "ng0";
-                    }
-                    if (V2 == "y")
-                        N = "i";
-                    if (wV) {
-                        V1 = "w";
-                    }
-                    if (V1 == "â") {
-                        V1 = "@";
-                    }
-                    if (V1 + V2 == "ia" || V1 + V2 == "ua" || V1 + V2 == "ưa")
-                        N = "@";
-                    if (V1 == "ă") {
-                        V1_ = "ae";
-                    }
-                    V1 = DecodeVinaConsonants(V1);
-                    V1_ = DecodeVinaConsonants(V1_);
-                    V2 = DecodeVinaConsonants(V2);
-                    N = DecodeVinaConsonants(N);
-                    string dummy = V2;
-                    ApDungNguyenTacRieng(loi, V1 + V2, ref V2, ref dummy, ref N, strictToneShift: true);
-                    if (prevtontaiCcuoi) vow = "."; else vow += " ";
-                    if (prevtontaiCcuoi) {
-                        if (tontaiCcuoi) {
-                            AddPhoneme(phonemes, $"{vow}{V1}");
-                            AddPhoneme(phonemes, $"{V1}{V2}", ViTri);
-                        } else if (NoNext) { // không có nốt kế tiếp
-                            if (wV) { // oa oe uê ,...
-                                AddPhoneme(phonemes, $"{vow}{V1}{V2}");
-                                AddPhoneme(phonemes, $"{N} -", End);
-                            } else if (VV_) { // ai eo êu ao,...
-                                AddPhoneme(phonemes, $"{vow}{V1}");
-                                AddPhoneme(phonemes, $"{V1}{N} -", End);
-                            } else { // an anh
-                                AddPhoneme(phonemes, $"{vow}{V1}");
-                                AddPhoneme(phonemes, $"{V1_}{V2}", ViTri);
-                                AddPhoneme(phonemes, $"{N} -", End);
-                            }
-                        } else {  // có nốt kế tiếp
-                            if (wV) { // oa oe uê ,...
-                                AddPhoneme(phonemes, $"{vow}{V1}{V2}");
-                            } else if (VV_) { // ai eo êu ao,...
-                                AddPhoneme(phonemes, $"{vow}{V1}");
-                                AddPhoneme(phonemes, $"{V1}{N}", ViTri);
-                            } else { // an anh
-                                AddPhoneme(phonemes, $"{vow}{V1}");
-                                AddPhoneme(phonemes, $"{V1_}{V2}", ViTri);
-                            }
-                        }
-                    } else if (tontaiCcuoi) {
-                        AddPhoneme(phonemes, $"{vow}{V1}");
-                        AddPhoneme(phonemes, $"{V1}{V2}", ViTri);
-                    } else if (NoNext) { // không có nốt kế tiếp
-                        if (wV) { // oa oe uê ,...
-                            AddPhoneme(phonemes, $"{vow}{V1}", VCP);
-                            AddPhoneme(phonemes, $"{V1}{V2}");
-                            AddPhoneme(phonemes, $"{N} -", End);
-                        } else if (VV_) { // ai eo êu ao,...
-                            AddPhoneme(phonemes, $"{vow}{V1}");
-                            AddPhoneme(phonemes, $"{V1}{N} -", End);
-                        } else { // an anh
-                            AddPhoneme(phonemes, $"{vow}{V1}");
-                            AddPhoneme(phonemes, $"{V1_}{V2}", ViTri);
-                            AddPhoneme(phonemes, $"{N} -", End);
-                        }
-                    } else {  // có nốt kế tiếp
-                        if (wV) { // oa oe uê ,...
-                            AddPhoneme(phonemes, $"{vow}{V1}", VCP);
-                            AddPhoneme(phonemes, $"{V1}{V2}");
-                        } else if (VV_) { // ai eo êu ao,...
-                            AddPhoneme(phonemes, $"{vow}{V1}");
-                            AddPhoneme(phonemes, $"{V1}{N}", ViTri);
-                        } else { // an anh
-                            AddPhoneme(phonemes, $"{vow}{V1}");
-                            AddPhoneme(phonemes, $"{V1_}{V2}", ViTri);
-                        }
-                    }
-                }
-                // 3 âm VVC/VVV, ví dụ: "oát" "oan" "oai" "uân"
-                if (!fry && dem == 3 && koVVCchia && kocoC) {
-                    string V1 = loi.Substring(0, 1);
-                    string V2 = loi.Substring(1, 1);
-                    string V2_2 = V2;
-                    string V3 = loi.Substring(2, 1);
-                    a = IsToneShift(loi);
-                    if (a) {
-                        V3 = "@";
-                    }
-                    if (wV) {
-                        V1 = "w";
-                    }
-                    if (V2 == "ă") {
-                        V2_2 = "ae";
-                    }
-                    if (V2 == "â") {
-                        V2 = "@";
-                    }
-                    V1 = DecodeVinaConsonants(V1);
-                    V2 = DecodeVinaConsonants(V2);
-                    V2_2 = DecodeVinaConsonants(V2_2);
-
-                    V3 = DecodeVinaConsonants(V3);
-                    string N = V3;
-                    ApDungNguyenTacRieng(loi, V2 + V3, ref V2, ref V2_2, ref N);
-                    if (V3 == "y") N = "i";
-                    if (prevtontaiCcuoi) vow = "."; else vow += " ";
-                    if (prevtontaiCcuoi) {
-                        if (NoNext) { // không có nốt kế tiếp
-                            if (VV_) {
-                                AddPhoneme(phonemes, $"{vow}{V1}{V2}");
-                                AddPhoneme(phonemes, $"{V2_2}{N} -", End);
-                            } else {
-                                AddPhoneme(phonemes, $"{vow}{V1}{V2}");
-                                AddPhoneme(phonemes, $"{V2_2}{V3}", ViTri);
-                                AddPhoneme(phonemes, $"{N} -", End);
-                            }
-                        } else { // có nốt kế tiếp
-                            if (VV_) {
-                                AddPhoneme(phonemes, $"{vow}{V1}{V2}");
-                                AddPhoneme(phonemes, $"{V2_2}{V3}", ViTri);
-                            } else {
-                                AddPhoneme(phonemes, $"{vow}{V1}{V2}");
-                                AddPhoneme(phonemes, $"{V2_2}{V3}", ViTri);
-                            }
-                        }
-                    } else {
-                        if (NoNext) { // không có nốt kế tiếp
-                            if (wV && VV_) {
-                                AddPhoneme(phonemes, $"{vow}{V1}", VCP);
-                                AddPhoneme(phonemes, $"{V1}{V2}");
-                                AddPhoneme(phonemes, $"{V2_2}{N} -", End);
+                        break;
+                    case 3:
+                        if (tontaiC && !fry) {
+                            // 3 âm CVV/CVC, ví dụ: "hoa" "hang" "hát"
+                            string C = loi.Substring(0, 1);
+                            string V1 = loi.Substring(1, 1);
+                            string V2 = loi.Substring(2);
+                            string V2_2 = V2;
+                            string Cw = C;
+                            string V1_1 = V1;
+                            if (loi.EndsWith("uy")) { V2 = "i"; V2_2 = V2; }
+                            bool kAn = loi.EndsWith("kAn");
+                            if (V1 == "â") V1 = "@";
+                            if (V1 == "ă") V1_1 = "ae";
+                            if (wV && _Cw) {
+                                Cw = C + "w";
+                                V1 = "w";
                             } else if (wV) {
-                                AddPhoneme(phonemes, $"{vow}{V1}", VCP);
-                                AddPhoneme(phonemes, $"{V1}{V2}");
-                                AddPhoneme(phonemes, $"{V2_2}{V3}", ViTri);
-                                AddPhoneme(phonemes, $"{N} -", End);
+                                V1 = "w";
+                            } else if (_Cw) Cw = C + "w";
+                            if (V1 == "i" && _Cw) Cw = C + "y";
+                            Cw = DecodeVinaConsonants(Cw);
+                            C = DecodeVinaConsonants(C);
+                            V1 = DecodeVinaConsonants(V1);
+                            V2 = DecodeVinaConsonants(V2);
+                            V2_2 = DecodeVinaConsonants(V2_2);
+                            V1_1 = DecodeVinaConsonants(V1_1);
+
+                            string N = V2;
+                            ApDungNguyenTacRieng(loi, V1 + V2, ref V2, ref V2_2, ref N, strictToneShift: true);
+
+                            if (_CV && (isFirstNote || prevtontaiCcuoi)) { C = "- " + C; }
+                            if (!isFirstNote) vow += " ";
+                            bool hasVCP = isFirstNote ? _C : !NoVCP;
+                            string prefixVCP = isFirstNote ? "- " : vow;
+
+                            if (tontaiCcuoi) { // có C cuối (at, ac,...)
+                                if (hasVCP) {
+                                    AddPhoneme(phonemes, $"{prefixVCP}{Cw}", VCP);
+                                }
+                                AddPhoneme(phonemes, $"{C}{V1}");
+                                AddPhoneme(phonemes, $"{V1_1}{V2_2}", ViTri);
+                            } else if (kAn) {
+                                if (NoNext) {
+                                    if (hasVCP) {
+                                        AddPhoneme(phonemes, $"{prefixVCP}k", VCP);
+                                    }
+                                    AddPhoneme(phonemes, $"kAn");
+                                    AddPhoneme(phonemes, $"n -", End);
+                                } else {
+                                    if (hasVCP) {
+                                        AddPhoneme(phonemes, $"{prefixVCP}k", VCP);
+                                    }
+                                    AddPhoneme(phonemes, $"kAn");
+                                }
+                            } else if (NoNext) { // không có nốt kế tiếp
+                                if (hasVCP) {
+                                    AddPhoneme(phonemes, $"{prefixVCP}{Cw}", VCP);
+                                }
+                                if (VV_) {
+                                    AddPhoneme(phonemes, $"{C}{V1}");
+                                    AddPhoneme(phonemes, $"{V1_1}{V2} -", End);
+                                } else if (wV) {
+                                    AddPhoneme(phonemes, $"{C}{V1}{V2_2}");
+                                    AddPhoneme(phonemes, $"{V2} -", End);
+                                } else { // bình thường
+                                    AddPhoneme(phonemes, $"{C}{V1}");
+                                    AddPhoneme(phonemes, $"{V1_1}{V2_2}", ViTri);
+                                    AddPhoneme(phonemes, $"{N} -", End);
+                                }
+                            } else { // có nốt kế tiếp
+                                if (hasVCP) {
+                                    AddPhoneme(phonemes, $"{prefixVCP}{Cw}", VCP);
+                                }
+                                if (VV_) {
+                                    AddPhoneme(phonemes, $"{C}{V1}");
+                                    AddPhoneme(phonemes, $"{V1_1}{V2_2}", ViTri);
+                                } else if (wV) {
+                                    AddPhoneme(phonemes, $"{C}{V1}{V2_2}");
+                                } else { // bths
+                                    AddPhoneme(phonemes, $"{C}{V1}");
+                                    AddPhoneme(phonemes, $"{V1_1}{V2_2}", ViTri);
+                                }
                             }
-                        } else { // có nốt kế tiếp
-                            if (wV && VV_) {
-                                AddPhoneme(phonemes, $"{vow}{V1}", VCP);
-                                AddPhoneme(phonemes, $"{V1}{V2}");
-                                AddPhoneme(phonemes, $"{V2_2}{V3}", ViTri);
-                            } else if (wV) {
-                                AddPhoneme(phonemes, $"{vow}{V1}", VCP);
-                                AddPhoneme(phonemes, $"{V1}{V2}");
-                                AddPhoneme(phonemes, $"{V2_2}{V3}", ViTri);
+                        } else if (!tontaiC && !fry) {
+                            if (koVVCchia) { // 3 âm VVC/VVV, ví dụ: "oát" "oan" "oai"
+                                string V1 = loi.Substring(0, 1);
+                                string V2 = loi.Substring(1, 1);
+                                string V2_2 = V2;
+                                string V3 = loi.Substring(2, 1);
+                                a = IsToneShift(loi);
+                                if (a) {
+                                    V3 = "@";
+                                }
+                                if (wV) {
+                                    V1 = "w";
+                                }
+                                if (V2 == "ă") {
+                                    V2_2 = "ae";
+                                }
+                                if (V2 == "â") {
+                                    V2 = "@";
+                                }
+                                V1 = DecodeVinaConsonants(V1);
+                                V2 = DecodeVinaConsonants(V2);
+                                V2_2 = DecodeVinaConsonants(V2_2);
+                                V3 = DecodeVinaConsonants(V3);
+                                string N = V3;
+                                ApDungNguyenTacRieng(loi, V2 + V3, ref V2, ref V2_2, ref N, strictToneShift: true);
+
+                                if (V3 == "y") N = "i";
+                                if (!isFirstNote) {
+                                    if (prevtontaiCcuoi) vow = "."; else vow += " ";
+                                }
+
+                                if (!isFirstNote && prevtontaiCcuoi) {
+                                    if (NoNext) { // không có nốt kế tiếp
+                                        if (VV_) {
+                                            AddPhoneme(phonemes, $"{vow}{V1}{V2}");
+                                            AddPhoneme(phonemes, $"{V2_2}{N} -", End);
+                                        } else {
+                                            AddPhoneme(phonemes, $"{vow}{V1}{V2}");
+                                            AddPhoneme(phonemes, $"{V2_2}{V3}", ViTri);
+                                            AddPhoneme(phonemes, $"{N} -", End);
+                                        }
+                                    } else { // có nốt kế tiếp
+                                        if (VV_) {
+                                            AddPhoneme(phonemes, $"{vow}{V1}{V2}");
+                                            AddPhoneme(phonemes, $"{V2_2}{V3}", ViTri);
+                                        } else {
+                                            AddPhoneme(phonemes, $"{vow}{V1}{V2}");
+                                            AddPhoneme(phonemes, $"{V2_2}{V3}", ViTri);
+                                        }
+                                    }
+                                } else {
+                                    string prefixVCP = isFirstNote ? "- " : vow;
+                                    bool hasVCP = isFirstNote ? wV : true;
+
+                                    if (tontaiCcuoi && wV) {
+                                        if (!isFirstNote) AddPhoneme(phonemes, $"{prefixVCP}{V1}", VCP);
+                                        AddPhoneme(phonemes, isFirstNote ? $"- {V1}{V2}" : $"{V1}{V2}");
+                                        AddPhoneme(phonemes, $"{V2}{V3}", ViTri);
+                                    } else if (NoNext) { // không có nốt kế tiếp
+                                        if (wV && VV_) {
+                                            if (hasVCP) {
+                                                AddPhoneme(phonemes, isFirstNote ? $"- {V1}{V2}" : $"{prefixVCP}{V1}", isFirstNote ? 0 : VCP);
+                                            }
+                                            if (!isFirstNote) AddPhoneme(phonemes, $"{V1}{V2}");
+                                            AddPhoneme(phonemes, $"{V2_2}{N} -", End);
+                                        } else if (wV) {
+                                            if (hasVCP) {
+                                                AddPhoneme(phonemes, isFirstNote ? $"- {V1}{V2}" : $"{prefixVCP}{V1}", isFirstNote ? 0 : VCP);
+                                            }
+                                            if (!isFirstNote) AddPhoneme(phonemes, $"{V1}{V2}");
+                                            AddPhoneme(phonemes, $"{V2_2}{V3}", ViTri);
+                                            AddPhoneme(phonemes, $"{N} -", End);
+                                        }
+                                    } else { // có nốt kế tiếp
+                                        if (wV && VV_) {
+                                            if (hasVCP) {
+                                                AddPhoneme(phonemes, isFirstNote ? $"- {V1}{V2}" : $"{prefixVCP}{V1}", isFirstNote ? 0 : VCP);
+                                            }
+                                            if (!isFirstNote) AddPhoneme(phonemes, $"{V1}{V2}");
+                                            AddPhoneme(phonemes, $"{V2_2}{V3}", ViTri);
+                                        } else if (wV) {
+                                            if (hasVCP) {
+                                                AddPhoneme(phonemes, isFirstNote ? $"- {V1}{V2}" : $"{prefixVCP}{V1}", isFirstNote ? 0 : VCP);
+                                            }
+                                            if (!isFirstNote) AddPhoneme(phonemes, $"{V1}{V2}");
+                                            AddPhoneme(phonemes, $"{V2_2}{V3}", ViTri);
+                                        }
+                                    }
+                                }
+                            } else if (tontaiVVC) { // 3 âm VVV/VVC chia 2 nốt, ví dụ: "yên" "ướt"
+                                string V1 = loi.Substring(0, 1);
+                                string VVC = loi.Substring(0);
+                                string C = loi.Substring(2);
+                                V1 = DecodeVinaConsonants(V1);
+                                VVC = DecodeVinaConsonants(VVC);
+                                C = DecodeVinaConsonants(C);
+                                string prefix = isFirstNote ? "" : "- ";
+                                string dummyVVC = VVC;
+                                // Bugfix strictToneShift=false cho VVC 3-âm
+                                ApDungNguyenTacRieng(loi, VVC, ref dummyVVC, ref dummyVVC, ref C);
+                                if (!isFirstNote) {
+                                    if (prevtontaiCcuoi) vow = "."; else vow += " ";
+                                    prefix = vow;
+                                }
+
+                                if (NoNext && tontaiCcuoi) {
+                                    AddPhoneme(phonemes, $"{prefix}{V1}");
+                                    AddPhoneme(phonemes, $"{VVC}", ViTri);
+                                } else if (NoNext) {
+                                    AddPhoneme(phonemes, $"{prefix}{V1}");
+                                    AddPhoneme(phonemes, $"{VVC}", ViTri);
+                                    AddPhoneme(phonemes, $"{C} -", End);
+                                } else {
+                                    AddPhoneme(phonemes, $"{prefix}{V1}");
+                                    AddPhoneme(phonemes, $"{VVC}", ViTri);
+                                }
                             }
                         }
-                    }
-                }
-                // 3 âm VVV/VVC chia 2 nốt, ví dụ: "yên" "ướt"
-                if ((dem == 3) && tontaiVVC && kocoC) {
-                    string V1 = loi.Substring(0, 1);
-                    string VVC = loi.Substring(0);
-                    string C = loi.Substring(2);
-                    V1 = DecodeVinaConsonants(V1);
-                    VVC = DecodeVinaConsonants(VVC);
-                    C = DecodeVinaConsonants(C);
-                    string dummy = VVC;
-                    ApDungNguyenTacRieng(loi, VVC, ref VVC, ref dummy, ref C);
-                    if (prevtontaiCcuoi) vow = "."; else vow += " ";
-                    if (NoNext && tontaiCcuoi) {
-                        AddPhoneme(phonemes, $"{vow}{V1}");
-                        AddPhoneme(phonemes, $"{VVC}", ViTri);
-                    } else if (NoNext) {
-                        AddPhoneme(phonemes, $"{vow}{V1}");
-                        AddPhoneme(phonemes, $"{VVC}", ViTri);
-                        AddPhoneme(phonemes, $"{C} -", End);
-                    } else {
-                        AddPhoneme(phonemes, $"{vow}{V1}");
-                        AddPhoneme(phonemes, $"{VVC}", ViTri);
-                    }
+                        break;
+                    case 4:
+                        if (!fry) {
+                            if (tontaiVVC && tontaiC) { // (tiên, tiết)
+                                string C = loi.Substring(0, 1);
+                                string Cw = C;
+                                string V1 = loi.Substring(1, 1);
+                                string VVC = loi.Substring(1);
+                                string N = loi.Substring(3);
+                                if (V1 == "i" && _Cw) {
+                                    Cw = C + "y";
+                                }
+                                C = DecodeVinaConsonants(C);
+                                Cw = DecodeVinaConsonants(Cw);
+                                V1 = DecodeVinaConsonants(V1);
+                                VVC = DecodeVinaConsonants(VVC);
+                                N = DecodeVinaConsonants(N);
+                                string dummy = VVC;
+                                ApDungNguyenTacRieng(loi, VVC, ref VVC, ref dummy, ref N);
+
+                                if (!isFirstNote) {
+                                    if (_CV && prevtontaiCcuoi) { C = "- " + C; }
+                                    vow += " ";
+                                } else {
+                                    if (_CV) { C = "- " + C; }
+                                }
+
+                                bool hasVCP = isFirstNote ? _C : !NoVCP;
+                                string prefixVCP = isFirstNote ? "- " : vow;
+
+                                if (hasVCP) {
+                                    if (tontaiCcuoi) { // có C ngắt
+                                        AddPhoneme(phonemes, $"{prefixVCP}{Cw}", VCP);
+                                        AddPhoneme(phonemes, $"{C}{V1}");
+                                        AddPhoneme(phonemes, $"{VVC}", ViTri);
+                                    } else if (NoNext) { // ko có note kế tiếp
+                                        AddPhoneme(phonemes, $"{prefixVCP}{Cw}", VCP);
+                                        AddPhoneme(phonemes, $"{C}{V1}");
+                                        AddPhoneme(phonemes, $"{VVC}", ViTri);
+                                        AddPhoneme(phonemes, $"{N} -", End);
+                                    } else { // có note kế tiếp
+                                        AddPhoneme(phonemes, $"{prefixVCP}{Cw}", VCP);
+                                        AddPhoneme(phonemes, $"{C}{V1}");
+                                        AddPhoneme(phonemes, $"{VVC}", ViTri);
+                                    }
+                                } else {
+                                    if (tontaiCcuoi) { // có C ngắt
+                                        AddPhoneme(phonemes, $"{C}{V1}");
+                                        AddPhoneme(phonemes, $"{VVC}", ViTri);
+                                    } else if (NoNext) { // ko có note kế tiếp
+                                        AddPhoneme(phonemes, $"{C}{V1}");
+                                        AddPhoneme(phonemes, $"{VVC}", ViTri);
+                                        AddPhoneme(phonemes, $"{N} -", End);
+                                    } else { // có note kế tiếp
+                                        AddPhoneme(phonemes, $"{C}{V1}");
+                                        AddPhoneme(phonemes, $"{VVC}", ViTri);
+                                    }
+                                }
+                            } else if (tontaiVVC && !tontaiC) { // 4 âm VVVC có VVC liền, chia 3 nốt, ví dụ "uyết" "uyên"
+                                string V1 = loi.Substring(0, 1);
+                                string V2 = loi.Substring(1, 1);
+                                string VVC = loi.Substring(1);
+                                string C = loi.Substring(3);
+                                if (V1 == "u") V1 = "w";
+                                V1 = DecodeVinaConsonants(V1);
+                                V2 = DecodeVinaConsonants(V2);
+                                VVC = DecodeVinaConsonants(VVC);
+                                C = DecodeVinaConsonants(C);
+
+                                bool hasVCP = isFirstNote ? _C : !NoVCP;
+                                string prefixVCP = isFirstNote ? "- " : vow;
+
+                                if (!isFirstNote) {
+                                    if (prevtontaiCcuoi) vow = "."; else vow += " ";
+                                }
+
+                                if (!isFirstNote && prevtontaiCcuoi) {
+                                    if (tontaiCcuoi) {
+                                        AddPhoneme(phonemes, $"{vow}{V1}{V2}");
+                                        AddPhoneme(phonemes, $"{VVC}", ViTri);
+                                    } else if (NoNext) {
+                                        AddPhoneme(phonemes, $"{vow}{V1}{V2}");
+                                        AddPhoneme(phonemes, $"{VVC}", ViTri);
+                                        AddPhoneme(phonemes, $"{C} -", End);
+                                    } else {
+                                        AddPhoneme(phonemes, $"{vow}{V1}{V2}");
+                                        AddPhoneme(phonemes, $"{VVC}", ViTri);
+                                    }
+                                } else {
+                                    if (NoNext && tontaiCcuoi) {
+                                        if (hasVCP) AddPhoneme(phonemes, $"{prefixVCP}{V1}", VCP);
+                                        AddPhoneme(phonemes, isFirstNote ? $"- {V1}{V2}" : $"{V1}{V2}");
+                                        AddPhoneme(phonemes, $"{VVC}", ViTri);
+                                    } else if (NoNext) {
+                                        if (hasVCP) AddPhoneme(phonemes, $"{prefixVCP}{V1}", VCP);
+                                        AddPhoneme(phonemes, isFirstNote ? $"- {V1}{V2}" : $"{V1}{V2}");
+                                        AddPhoneme(phonemes, $"{VVC}", ViTri);
+                                        AddPhoneme(phonemes, $"{C} -", End);
+                                    } else {
+                                        if (hasVCP) AddPhoneme(phonemes, $"{prefixVCP}{V1}", VCP);
+                                        AddPhoneme(phonemes, isFirstNote ? $"- {V1}{V2}" : $"{V1}{V2}");
+                                        AddPhoneme(phonemes, $"{VVC}", ViTri);
+                                    }
+                                }
+                            } else if (!tontaiVVC) { // 4 âm CVVC/CVVV, chia 3 nốt, ví dụ "thoát" "toan" "toại"
+                                string C = loi.Substring(0, 1);
+                                string Cw = C;
+                                string V1 = loi.Substring(1, 1);
+                                string V2 = loi.Substring(2, 1);
+                                string V2_2 = V2;
+                                string VC = loi.Substring(2);
+                                string N = loi.Substring(3);
+                                string N_ = N;
+                                if (V1 == "u") V1 = "w";
+                                if (wV && _Cw) {
+                                    Cw = C + "w";
+                                    V1 = "w";
+                                } else if (wV)
+                                    V1 = "w";
+                                if (V1 == "i")
+                                    Cw = C + "y";
+                                if (V2 == "ă") V2_2 = "ae";
+                                if (!isFirstNote && V2 == "â") V2 = "@";
+                                C = DecodeVinaConsonants(C);
+                                Cw = DecodeVinaConsonants(Cw);
+                                V1 = DecodeVinaConsonants(V1);
+                                V2_2 = DecodeVinaConsonants(V2_2);
+                                V2 = DecodeVinaConsonants(V2);
+                                VC = DecodeVinaConsonants(VC);
+                                N = DecodeVinaConsonants(N);
+                                N_ = DecodeVinaConsonants(N_);
+
+                                ApDungNguyenTacRieng(loi, V1 + V2, ref V2, ref V2_2, ref N, strictToneShift: true);
+                                N_ = N;
+
+                                bool hasVCP = isFirstNote ? _C : !NoVCP;
+                                string prefixVCP = isFirstNote ? "- " : vow;
+                                bool noVCP = isFirstNote ? false : NoVCP;
+
+                                if (!isFirstNote) {
+                                    if (_CV && prevtontaiCcuoi) { N = "- " + N; }
+                                    vow += " ";
+                                } else {
+                                    if (_CV) { C = "- " + C; }
+                                }
+
+                                if (noVCP) {
+                                    if (hasVCP) { // có C ngắt
+                                        AddPhoneme(phonemes, $"{C}{V1}{V2}");
+                                        AddPhoneme(phonemes, $"{VC}", ViTri);
+                                    } else if (note.lyric.EndsWith("uân") || note.lyric.EndsWith("uâng")) {
+                                        if (wAn == false) {
+                                            if (NoNext) {
+                                                if (loi.StartsWith(".")) {
+                                                    AddPhoneme(phonemes, $"{C}w@");
+                                                    AddPhoneme(phonemes, $"A{N}", ViTri);
+                                                    AddPhoneme(phonemes, $"{N_} -", End);
+                                                } else {
+                                                    AddPhoneme(phonemes, $"{C}wA{N}");
+                                                    AddPhoneme(phonemes, $"{N_} -", End);
+                                                }
+                                            } else {
+                                                if (loi.StartsWith(".")) {
+                                                    AddPhoneme(phonemes, $"{C}w@");
+                                                    AddPhoneme(phonemes, $"A{N}", ViTri);
+                                                } else {
+                                                    AddPhoneme(phonemes, $"{C}wA{N}");
+                                                }
+                                            }
+                                        } else { // khuân luân
+                                            if (NoNext) {
+                                                AddPhoneme(phonemes, $"{C}w");
+                                                AddPhoneme(phonemes, $"w@", Long);
+                                                AddPhoneme(phonemes, $"A{N}", Medium);
+                                                AddPhoneme(phonemes, $"{N_} -", End);
+                                            } else {
+                                                AddPhoneme(phonemes, $"{C}w");
+                                                AddPhoneme(phonemes, $"w@", Long);
+                                                AddPhoneme(phonemes, $"A{N}", Medium);
+                                            }
+                                        }
+                                    } else if (NoNext) {
+                                        if (VV_) {
+                                            AddPhoneme(phonemes, $"{C}{V1}{V2}");
+                                            AddPhoneme(phonemes, $"{V2}{N} -", End);
+                                        } else { // ko có VV -
+                                            AddPhoneme(phonemes, $"{C}{V1}{V2}");
+                                            AddPhoneme(phonemes, $"{V2_2}{N}", ViTri);
+                                            AddPhoneme(phonemes, $"{N} -", End);
+                                        }
+                                    } else {
+                                        if (VV_) {
+                                            AddPhoneme(phonemes, $"{C}{V1}{V2}"); // Bugfix 2: Restore missing V1
+                                            AddPhoneme(phonemes, $"{V2}{N}", ViTri);
+                                        } else { // ko có VV -
+                                            AddPhoneme(phonemes, $"{C}{V1}{V2}");
+                                            AddPhoneme(phonemes, $"{V2_2}{N}", ViTri);
+                                        }
+                                    }
+                                } else { // isFirstNote OR (!isFirstNote && !NoVCP)
+                                    if (tontaiCcuoi) { // có C ngắt
+                                        if (_C) {
+                                            AddPhoneme(phonemes, isFirstNote ? $"- {Cw}" : $"{prefixVCP}{Cw}", VCP);
+                                            AddPhoneme(phonemes, $"{C}{V1}{V2}");
+                                            AddPhoneme(phonemes, $"{VC}", ViTri);
+                                        } else {
+                                            AddPhoneme(phonemes, $"{C}{V1}{V2}");
+                                            AddPhoneme(phonemes, $"{VC}", ViTri);
+                                        }
+                                    } else if (note.lyric.EndsWith("uân") || note.lyric.EndsWith("uâng")) {
+                                        if (wAn == false) {
+                                            if (NoNext) {
+                                                if (loi.StartsWith(".")) {
+                                                    if (!isFirstNote && _C) AddPhoneme(phonemes, $"{prefixVCP}{Cw}", VCP);
+                                                    AddPhoneme(phonemes, $"{C}w@");
+                                                    AddPhoneme(phonemes, $"A{N}", ViTri);
+                                                    AddPhoneme(phonemes, $"{N_} -", End);
+                                                } else if (_C) {
+                                                    AddPhoneme(phonemes, isFirstNote ? $"- {Cw}" : $"{prefixVCP}{Cw}", VCP);
+                                                    AddPhoneme(phonemes, $"{C}wA{N}");
+                                                    AddPhoneme(phonemes, $"{N_} -", End);
+                                                } else {
+                                                    AddPhoneme(phonemes, $"{C}wA{N}");
+                                                    AddPhoneme(phonemes, $"{N_} -", End);
+                                                }
+                                            } else { //
+                                                if (loi.StartsWith(".")) {
+                                                    if (!isFirstNote && _C) AddPhoneme(phonemes, $"{prefixVCP}{Cw}", VCP);
+                                                    AddPhoneme(phonemes, $"{C}w@");
+                                                    AddPhoneme(phonemes, $"A{N}", ViTri);
+                                                } else if (_C) {
+                                                    AddPhoneme(phonemes, isFirstNote ? $"- {Cw}" : $"{prefixVCP}{Cw}", VCP);
+                                                    AddPhoneme(phonemes, $"{C}wA{N}");
+                                                } else {
+                                                    AddPhoneme(phonemes, $"{C}wA{N}");
+                                                }
+                                            }
+                                        } else { // khuân luân
+                                            if (NoNext) {
+                                                if (_C) {
+                                                    AddPhoneme(phonemes, isFirstNote ? $"- {Cw}" : $"{prefixVCP}{Cw}", VCP);
+                                                    AddPhoneme(phonemes, $"{C}w");
+                                                    AddPhoneme(phonemes, $"_w@", Long);
+                                                    AddPhoneme(phonemes, $"A{N}", Medium);
+                                                    AddPhoneme(phonemes, $"{N_} -", End);
+                                                } else {
+                                                    AddPhoneme(phonemes, $"{C}w");
+                                                    AddPhoneme(phonemes, $"_w@", Long);
+                                                    AddPhoneme(phonemes, $"A{N}", Medium);
+                                                    AddPhoneme(phonemes, $"{N_} -", End);
+                                                }
+                                            } else { //
+                                                if (_C) {
+                                                    AddPhoneme(phonemes, isFirstNote ? $"- {Cw}" : $"{prefixVCP}{Cw}", VCP);
+                                                    AddPhoneme(phonemes, $"{C}w");
+                                                    AddPhoneme(phonemes, $"_w@", Long);
+                                                    AddPhoneme(phonemes, $"A{N}", Medium);
+                                                } else {
+                                                    AddPhoneme(phonemes, $"{C}w");
+                                                    AddPhoneme(phonemes, $"_w@", Long);
+                                                    AddPhoneme(phonemes, $"A{N}", Medium);
+                                                }
+                                            }
+                                        }
+                                    } else if (NoNext) { // Bug 2: Restore "toan" phoneme generation mapping matching isFirstNote
+                                        if (VV_) {
+                                            if (_C) {
+                                                AddPhoneme(phonemes, isFirstNote ? $"- {Cw}" : $"{prefixVCP}{Cw}", VCP);
+                                                AddPhoneme(phonemes, $"{C}{V1}{V2}");
+                                                AddPhoneme(phonemes, $"{V2}{N_} -", End);
+                                            } else {
+                                                AddPhoneme(phonemes, $"{C}{V1}{V2}");
+                                                AddPhoneme(phonemes, $"{V2}{N_} -", End);
+                                            }
+                                        } else { // ko có VV -
+                                            if (_C) {
+                                                AddPhoneme(phonemes, isFirstNote ? $"- {Cw}" : $"{prefixVCP}{Cw}", VCP);
+                                                AddPhoneme(phonemes, $"{C}{V1}{V2}");
+                                                AddPhoneme(phonemes, $"{V2_2}{N}", ViTri);
+                                                AddPhoneme(phonemes, $"{N_} -", End);
+                                            } else {
+                                                AddPhoneme(phonemes, $"{C}{V1}{V2}");
+                                                AddPhoneme(phonemes, $"{V2_2}{N}", ViTri);
+                                                AddPhoneme(phonemes, $"{N_} -", End);
+                                            }
+                                        }
+                                    } else {
+                                        if (VV_) {
+                                            if (_C) {
+                                                AddPhoneme(phonemes, isFirstNote ? $"- {Cw}" : $"{prefixVCP}{Cw}", VCP);
+                                                AddPhoneme(phonemes, $"{C}{V1}{V2}");
+                                                AddPhoneme(phonemes, $"{V2}{N}", ViTri);
+                                            } else {
+                                                AddPhoneme(phonemes, $"{C}{V1}{V2}");
+                                                AddPhoneme(phonemes, $"{V2}{N}", ViTri);
+                                            }
+                                        } else { // ko có VV -
+                                            if (_C) {
+                                                AddPhoneme(phonemes, isFirstNote ? $"- {Cw}" : $"{prefixVCP}{Cw}", VCP);
+                                                AddPhoneme(phonemes, $"{C}{V1}{V2}");
+                                                AddPhoneme(phonemes, $"{V2_2}{N}", ViTri);
+                                            } else {
+                                                AddPhoneme(phonemes, $"{C}{V1}{V2}");
+                                                AddPhoneme(phonemes, $"{V2_2}{N}", ViTri);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        break;
+                    case 5:
+                        if (!fry && tontaiVVC && tontaiC) {
+                            // 5 âm CVVVC, có VVC liền, chia 3 nốt, ví dụ "thuyết"
+                            string C = loi.Substring(0, 1);
+                            string Cw = C;
+                            string V1 = loi.Substring(1, 1);
+                            string V2 = loi.Substring(2, 1);
+                            string VVC = loi.Substring(2);
+                            string N = loi.Substring(4);
+                            if (wV && _Cw) {
+                                Cw = C + "w";
+                                V1 = "w";
+                            } else if (wV)
+                                V1 = "w";
+                            if (V1 == "i")
+                                Cw = C + "y";
+                            C = DecodeVinaConsonants(C);
+                            Cw = DecodeVinaConsonants(Cw);
+                            V1 = DecodeVinaConsonants(V1);
+                            V2 = DecodeVinaConsonants(V2);
+                            VVC = DecodeVinaConsonants(VVC);
+                            N = DecodeVinaConsonants(N);
+                            string dummy = VVC;
+                            ApDungNguyenTacRieng(loi, V1 + V2, ref VVC, ref dummy, ref N);
+
+                            bool hasVCP = isFirstNote ? _C : !NoVCP;
+                            string prefixVCP = isFirstNote ? "- " : vow;
+
+                            if (!isFirstNote) {
+                                if (_CV && prevtontaiCcuoi) { N = "- " + N; }
+                                vow += " ";
+                            } else {
+                                if (_CV) { C = "- " + C; }
+                            }
+
+                            bool noVCP = !isFirstNote && NoVCP;   // Bugfix: Do not redeclare with wrong conditions
+
+                            if (noVCP) {
+                                if (tontaiCcuoi) { // có C ngắt
+                                    AddPhoneme(phonemes, $"{C}{V1}{V2}");
+                                    AddPhoneme(phonemes, $"{VVC}", ViTri);
+                                } else if (NoNext) { // ko có note kế tiếp
+                                    AddPhoneme(phonemes, $"{C}{V1}{V2}");
+                                    AddPhoneme(phonemes, $"{VVC}", ViTri);
+                                    AddPhoneme(phonemes, $"{N} -", End);
+                                } else { // có note kế tiếp
+                                    AddPhoneme(phonemes, $"{C}{V1}{V2}");
+                                    AddPhoneme(phonemes, $"{VVC}", ViTri);
+                                }
+                            } else {
+                                if (tontaiCcuoi) { // có C ngắt
+                                    if (_C) {
+                                        AddPhoneme(phonemes, isFirstNote ? $"- {Cw}" : $"{prefixVCP}{Cw}", VCP);
+                                        AddPhoneme(phonemes, $"{C}{V1}{V2}");
+                                        AddPhoneme(phonemes, $"{VVC}", ViTri);
+                                    } else {
+                                        AddPhoneme(phonemes, $"{C}{V1}{V2}");
+                                        AddPhoneme(phonemes, $"{VVC}", ViTri);
+                                    }
+                                } else if (NoNext) { // ko có note kế tiếp
+                                    if (hasVCP) {
+                                        AddPhoneme(phonemes, isFirstNote ? $"- {Cw}" : $"{prefixVCP}{Cw}", VCP);
+                                        AddPhoneme(phonemes, $"{C}{V1}{V2}");
+                                        AddPhoneme(phonemes, $"{VVC}", ViTri);
+                                        AddPhoneme(phonemes, $"{N} -", End);
+                                    } else {
+                                        AddPhoneme(phonemes, $"{C}{V1}{V2}");
+                                        AddPhoneme(phonemes, $"{VVC}", ViTri);
+                                        AddPhoneme(phonemes, $"{N} -", End);
+                                    }
+                                } else { // có note kế tiếp
+                                    if (_C) {
+                                        AddPhoneme(phonemes, isFirstNote ? $"- {Cw}" : $"{prefixVCP}{Cw}", VCP);
+                                        AddPhoneme(phonemes, $"{C}{V1}{V2}");
+                                        AddPhoneme(phonemes, $"{VVC}", ViTri);
+                                    } else {
+                                        AddPhoneme(phonemes, $"{C}{V1}{V2}");
+                                        AddPhoneme(phonemes, $"{VVC}", ViTri);
+                                    }
+                                }
+                            }
+                        }
+                        break;
                 }
             }
+
             // BR
             if (BR) {
                 string num = loi.Substring(5);
