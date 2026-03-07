@@ -288,6 +288,7 @@ namespace OpenUtau.Plugin.Builtin {
                 } else {
                     AddPhoneme(phonemes, $"{vow} --");
                 }
+                // 1 âm
             } else if (dem == 1) {
                 string N = loi;
                 N = NormalizePhonetics(N);
@@ -309,6 +310,7 @@ namespace OpenUtau.Plugin.Builtin {
                 } else {
                     AddPhoneme(phonemes, $"{onsetPrefix}{N}");
                 }
+                // 2 âm CV, ví dụ: "ba"
             } else if ((dem == 2) && tontaiC) {
                 string N = loi;
                 string N1 = loi.Substring(0, 1);
@@ -344,6 +346,7 @@ namespace OpenUtau.Plugin.Builtin {
                         AddPhoneme(phonemes, $"{N}");
                     }
                 }
+                // 3 âm CVV/CVC, ví dụ: "hoa" "hang" "hát"
             } else if (dem == 3 && tontaiC && !fry) {
                 string C = loi.Substring(0, 1);
                 string V1 = loi.Substring(1, 1);
@@ -390,7 +393,7 @@ namespace OpenUtau.Plugin.Builtin {
                 bool hasVCP = isFirstNote ? _C : !NoVCP;
                 string prefixVCP = isFirstNote ? "- " : vow;
 
-                if (tontaiCcuoi) { // co C cuoi (at, ac,...)
+                if (tontaiCcuoi) { // có C cuối (at, ac,...)
                     if (hasVCP) {
                         AddPhoneme(phonemes, $"{prefixVCP}{Cw}", VCP);
                         AddPhoneme(phonemes, $"{C}{V1}");
@@ -412,7 +415,7 @@ namespace OpenUtau.Plugin.Builtin {
                         }
                         AddPhoneme(phonemes, $"kAn");
                     }
-                } else if (NoNext) { // ko co note ke tiep
+                } else if (NoNext) { // không có nốt kế tiếp
                     if (hasVCP) {
                         AddPhoneme(phonemes, $"{prefixVCP}{Cw}", VCP);
                     }
@@ -422,12 +425,12 @@ namespace OpenUtau.Plugin.Builtin {
                     } else if (wV) {
                         AddPhoneme(phonemes, $"{C}{V1}{V2_2}");
                         AddPhoneme(phonemes, $"{V2} -", End);
-                    } else { // bths
+                    } else { // bình thường
                         AddPhoneme(phonemes, $"{C}{V1}");
                         AddPhoneme(phonemes, $"{V1_1}{V2_2}", ViTri);
                         AddPhoneme(phonemes, $"{N} -", End);
                     }
-                } else { // co note ke tiep
+                } else { // có nốt kế tiếp
                     if (hasVCP) {
                         AddPhoneme(phonemes, $"{prefixVCP}{Cw}", VCP);
                     }
@@ -441,6 +444,7 @@ namespace OpenUtau.Plugin.Builtin {
                         AddPhoneme(phonemes, $"{V1_1}{V2_2}", ViTri);
                     }
                 }
+                // 3 âm VVV/VVC chia 2 nốt, ví dụ: "yên" "ướt"
             } else if (dem == 3 && !tontaiC && !fry) {
                 // 3 âm VVV/VVC chia 2 nốt, ví dụ: "yên" "ướt"
                 string V1 = loi.Substring(0, 1);
@@ -820,7 +824,7 @@ namespace OpenUtau.Plugin.Builtin {
                             AddPhoneme(phonemes, $"{C}{V1}{V2}");
                             AddPhoneme(phonemes, $"{VVC}", ViTri);
                         }
-                    } else if (NoNext) { // ko có note kế tiếp
+                    } else if (NoNext) { // không có nốt kế tiếp
                         if (_C) {
                             AddPhoneme(phonemes, $"- {Cw}", VCP);
                             AddPhoneme(phonemes, $"{C}{V1}{V2}");
@@ -850,6 +854,7 @@ namespace OpenUtau.Plugin.Builtin {
                     // isFirstNote: vow == "-", không cần thêm vow trước breath
                     AddPhoneme(phonemes, $"breath{num}");
                 }
+                // phụ âm y
                 if (note.lyric.StartsWith("y") && koVVCchia) {
                     // Tính VCP prefix cho !isFirstNote
                     bool prevHasFinalC_y = false;
@@ -984,7 +989,7 @@ namespace OpenUtau.Plugin.Builtin {
                         if (tontaiCcuoi) {
                             AddPhoneme(phonemes, $"- {V1}");
                             AddPhoneme(phonemes, $"{V1}{V2}", ViTri);
-                        } else if (NoNext) { // ko co note ke tiep
+                        } else if (NoNext) { // không có nốt kế tiếp
                             if (wV) { // oa oe uê ,...
                                 AddPhoneme(phonemes, $"- {V1}{V2}");
                                 AddPhoneme(phonemes, $"{N} -", End);
@@ -996,7 +1001,7 @@ namespace OpenUtau.Plugin.Builtin {
                                 AddPhoneme(phonemes, $"{V1_}{V2}", ViTri);
                                 AddPhoneme(phonemes, $"{N} -", End);
                             }
-                        } else {  // co note ke tiep
+                        } else {  // có nốt kế tiếp
                             if (wV) { // oa oe uê ,...
                                 AddPhoneme(phonemes, $"- {V1}{V2}");
                             } else if (VV_) { // ai eo êu ao,...
@@ -1039,7 +1044,7 @@ namespace OpenUtau.Plugin.Builtin {
                         if (tontaiCcuoi && wV) {
                             AddPhoneme(phonemes, $"- {V1}{V2}");
                             AddPhoneme(phonemes, $"{V2}{V3}", ViTri);
-                        } else if (NoNext) { // ko co note ke tiep
+                        } else if (NoNext) { // không có nốt kế tiếp
                             if (wV && VV_) {
                                 AddPhoneme(phonemes, $"- {V1}{V2}");
                                 AddPhoneme(phonemes, $"{V2_2}{N} -", End);
@@ -1048,7 +1053,7 @@ namespace OpenUtau.Plugin.Builtin {
                                 AddPhoneme(phonemes, $"{V2_2}{V3}", ViTri);
                                 AddPhoneme(phonemes, $"{N} -", End);
                             }
-                        } else { // co note ke tiep
+                        } else { // có nốt kế tiếp
                             if (wV) {
                                 AddPhoneme(phonemes, $"- {V1}{V2}");
                                 AddPhoneme(phonemes, $"{V2_2}{V3}", ViTri);
@@ -1294,7 +1299,7 @@ namespace OpenUtau.Plugin.Builtin {
                         if (tontaiCcuoi) {
                             AddPhoneme(phonemes, $"{vow}{V1}");
                             AddPhoneme(phonemes, $"{V1}{V2}", ViTri);
-                        } else if (NoNext) { // ko co note ke tiep
+                        } else if (NoNext) { // không có nốt kế tiếp
                             if (wV) { // oa oe uê ,...
                                 AddPhoneme(phonemes, $"{vow}{V1}{V2}");
                                 AddPhoneme(phonemes, $"{N} -", End);
@@ -1306,7 +1311,7 @@ namespace OpenUtau.Plugin.Builtin {
                                 AddPhoneme(phonemes, $"{V1_}{V2}", ViTri);
                                 AddPhoneme(phonemes, $"{N} -", End);
                             }
-                        } else {  // co note ke tiep
+                        } else {  // có nốt kế tiếp
                             if (wV) { // oa oe uê ,...
                                 AddPhoneme(phonemes, $"{vow}{V1}{V2}");
                             } else if (VV_) { // ai eo êu ao,...
@@ -1320,7 +1325,7 @@ namespace OpenUtau.Plugin.Builtin {
                     } else if (tontaiCcuoi) {
                         AddPhoneme(phonemes, $"{vow}{V1}");
                         AddPhoneme(phonemes, $"{V1}{V2}", ViTri);
-                    } else if (NoNext) { // ko co note ke tiep
+                    } else if (NoNext) { // không có nốt kế tiếp
                         if (wV) { // oa oe uê ,...
                             AddPhoneme(phonemes, $"{vow}{V1}", VCP);
                             AddPhoneme(phonemes, $"{V1}{V2}");
@@ -1333,7 +1338,7 @@ namespace OpenUtau.Plugin.Builtin {
                             AddPhoneme(phonemes, $"{V1_}{V2}", ViTri);
                             AddPhoneme(phonemes, $"{N} -", End);
                         }
-                    } else {  // co note ke tiep
+                    } else {  // có nốt kế tiếp
                         if (wV) { // oa oe uê ,...
                             AddPhoneme(phonemes, $"{vow}{V1}", VCP);
                             AddPhoneme(phonemes, $"{V1}{V2}");
@@ -1377,7 +1382,7 @@ namespace OpenUtau.Plugin.Builtin {
                     }
                     if (prevtontaiCcuoi) vow = "."; else vow += " ";
                     if (prevtontaiCcuoi) {
-                        if (NoNext) { // ko co note ke tiep
+                        if (NoNext) { // không có nốt kế tiếp
                             if (VV_) {
                                 AddPhoneme(phonemes, $"{vow}{V1}{V2}");
                                 AddPhoneme(phonemes, $"{V2_2}{N} -", End);
@@ -1386,7 +1391,7 @@ namespace OpenUtau.Plugin.Builtin {
                                 AddPhoneme(phonemes, $"{V2_2}{V3}", ViTri);
                                 AddPhoneme(phonemes, $"{N} -", End);
                             }
-                        } else { // co note ke tiep
+                        } else { // có nốt kế tiếp
                             if (VV_) {
                                 AddPhoneme(phonemes, $"{vow}{V1}{V2}");
                                 AddPhoneme(phonemes, $"{V2_2}{V3}", ViTri);
@@ -1396,7 +1401,7 @@ namespace OpenUtau.Plugin.Builtin {
                             }
                         }
                     } else {
-                        if (NoNext) { // ko co note ke tiep
+                        if (NoNext) { // không có nốt kế tiếp
                             if (wV && VV_) {
                                 AddPhoneme(phonemes, $"{vow}{V1}", VCP);
                                 AddPhoneme(phonemes, $"{V1}{V2}");
@@ -1407,7 +1412,7 @@ namespace OpenUtau.Plugin.Builtin {
                                 AddPhoneme(phonemes, $"{V2_2}{V3}", ViTri);
                                 AddPhoneme(phonemes, $"{N} -", End);
                             }
-                        } else { // co note ke tiep
+                        } else { // có nốt kế tiếp
                             if (wV && VV_) {
                                 AddPhoneme(phonemes, $"{vow}{V1}", VCP);
                                 AddPhoneme(phonemes, $"{V1}{V2}");
