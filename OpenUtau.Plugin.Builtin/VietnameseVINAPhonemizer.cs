@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using OpenUtau.Api;
@@ -70,10 +70,14 @@ namespace OpenUtau.Plugin.Builtin {
         /// </summary>
         private static string EncodeToVina(string text) {
             if (string.IsNullOrEmpty(text)) return text;
-            text = text.Replace("ngh", "N").Replace("ch", "C").Replace("kh", "K").Replace("ng", "N").Replace("nh", "J")
+            return text.Replace("ngh", "N").Replace("ch", "C").Replace("kh", "K").Replace("ng", "N").Replace("nh", "J")
                        .Replace("tr", "Z").Replace("th", "T").Replace("gi", "z").Replace("qu", "w").Replace("gh", "g")
                        .Replace("ph", "f").Replace("d", "z").Replace("đ", "d").Replace("c", "k").Replace("x", "s")
                        .Replace("r", "z").Replace("q", "k");
+        }
+
+        private static string EncodeVowelsToVina(string text) {
+            if (string.IsNullOrEmpty(text)) return text;
             return text.Replace("ă", "a").Replace("â", "A").Replace("ơ", "@").Replace("y", "i")
                        .Replace("ê", "E").Replace("ô", "O").Replace("ư", "U");
         }
@@ -106,6 +110,7 @@ namespace OpenUtau.Plugin.Builtin {
         }
 
         private static void AddPhoneme(List<Phoneme> phonemes, string phoneme, int? position = null) {
+            phoneme = EncodeVowelsToVina(phoneme);
             if (position.HasValue) {
                 phonemes.Add(new Phoneme { phoneme = phoneme, position = position.Value });
             } else {
@@ -235,13 +240,18 @@ namespace OpenUtau.Plugin.Builtin {
             bool a = false, BR = false;
 
             if (note.lyric.StartsWith("?")) {
-                AddPhoneme(phonemes, note.lyric.Substring(1));
+                AddPhoneme(phonemes, note.lyric[1..]);
                 // Map OTO và return ngay
                 var attr0 = note.phonemeAttributes?.FirstOrDefault(attr => attr.index == 0) ?? default;
-                if (singer.TryGetMappedOto($"{note.lyric.Substring(1)}{attr0.alternate?.ToString() ?? string.Empty}", note.tone + attr0.toneShift, attr0.voiceColor, out var oto0)) {
+                if (
+                    singer.TryGetMappedOto(
+                        $"{note.lyric[1..]}{attr0.alternate?.ToString() ?? string.Empty}",
+                        note.tone + attr0.toneShift,
+                        attr0.voiceColor,
+                        out var oto0)) {
                     phonemes[0] = new Phoneme { phoneme = oto0.Alias };
                 }
-                return new Result { phonemes = phonemes.ToArray() };
+                return new Result { phonemes = [.. phonemes] };
             }
 
             bool NoNext = nextNeighbour == null && note.lyric != "R";
@@ -280,24 +290,27 @@ namespace OpenUtau.Plugin.Builtin {
             var (kocoC, koVVCchia) = (!tontaiC, !tontaiVVC);
 
             // Calculate VCP dynamically
-            if (prevNeighbour != null) {
-                if (prevNeighbour.Value.duration < 160) {
-                    VCP = -(prevNeighbour.Value.duration * 4 / 8);
-                } else if (VCP70) {
-                    VCP = -70;
-                } else {
-                    VCP = -110;
-                }
+            if (VCP70) {
+                VCP = -70;
+            } else {
+                VCP = -110;
+            }
+            if (prevNeighbour != null && prevNeighbour.Value.duration < 160) {
+                VCP = -(prevNeighbour.Value.duration * 4 / 8);
             }
 
             // Adjust timing positions based on lyric characteristics
-            if (VITRINGAN_ENDS.Any(loi.EndsWith) || loi.EndsWith("uôN")) {
-                ViTri = Short;
-            } else if (VITRIDAI_ENDS.Any(loi.EndsWith)) {
-                ViTri = Long;
-            } else if (VITRITB_CONTAINS.Any(loi.Contains) || VITRITB_ENDS.Any(loi.EndsWith)) {
+            ViTri = Short;
+            if (VITRITB_CONTAINS.Any(loi.Contains) || VITRITB_ENDS.Any(loi.EndsWith)) {
                 ViTri = Medium;
-            } else {
+            }
+            if (VITRINGAN_ENDS.Any(loi.EndsWith)) {
+                ViTri = Short;
+            }
+            if (VITRIDAI_ENDS.Any(loi.EndsWith)) {
+                ViTri = Long;
+            }
+            if (loi.EndsWith("uôN")) {
                 ViTri = Short;
             }
 
@@ -623,30 +636,30 @@ namespace OpenUtau.Plugin.Builtin {
                                 if (NoNext) {
                                     if (loi.StartsWith(".")) {
                                         AddPhoneme(phonemes, $"{C}w@");
-                                        AddPhoneme(phonemes, $"An", ViTri);
-                                        AddPhoneme(phonemes, $"n -", End);
+                                        AddPhoneme(phonemes, $"A{N}", ViTri);
+                                        AddPhoneme(phonemes, $"{N_} -", End);
                                     } else {
-                                        AddPhoneme(phonemes, $"{C}wAn");
-                                        AddPhoneme(phonemes, $"n -", End);
+                                        AddPhoneme(phonemes, $"{C}wA{N}");
+                                        AddPhoneme(phonemes, $"{N_} -", End);
                                     }
                                 } else {
                                     if (loi.StartsWith(".")) {
                                         AddPhoneme(phonemes, $"{C}w@");
-                                        AddPhoneme(phonemes, $"An", ViTri);
+                                        AddPhoneme(phonemes, $"A{N}", ViTri);
                                     } else {
-                                        AddPhoneme(phonemes, $"{C}wAn");
+                                        AddPhoneme(phonemes, $"{C}wA{N}");
                                     }
                                 }
                             } else { // khuân luân
                                 if (NoNext) {
                                     AddPhoneme(phonemes, $"{C}w");
                                     AddPhoneme(phonemes, $"w@", Long);
-                                    AddPhoneme(phonemes, $"An", Medium);
-                                    AddPhoneme(phonemes, $"n -", End);
+                                    AddPhoneme(phonemes, $"A{N}", Medium);
+                                    AddPhoneme(phonemes, $"{N_} -", End);
                                 } else {
                                     AddPhoneme(phonemes, $"{C}w");
                                     AddPhoneme(phonemes, $"w@", Long);
-                                    AddPhoneme(phonemes, $"An", Medium);
+                                    AddPhoneme(phonemes, $"A{N}", Medium);
                                 }
                             }
                         } else if (NoNext) {
@@ -911,11 +924,9 @@ namespace OpenUtau.Plugin.Builtin {
                 }
                 // phụ âm y
                 if (note.lyric.StartsWith("y") && koVVCchia) {
-                    // Tính VCP prefix cho !isFirstNote
-                    bool prevHasFinalC_y = false;
-                    bool noVCP_y = false;
-                    string vow_y = isFirstNote ? "-" : TinhToanAmChuyenTiep(prevNeighbour!.Value, loi, H, true, out prevHasFinalC_y, out noVCP_y);
-                    bool hasPrefixVCP_y = prevHasFinalC_y; // C trước → dùng "- y" prefix
+                    // Tính VCP prefix cho !isFirstNote using existing variables
+                    bool hasPrefixVCP_y = prevtontaiCcuoi; // C trước → dùng "- y" prefix
+                    string vow_y = vow;
                     if (dem == 2) { // ya
                         string C = note.lyric.Substring(0, 1);
                         string V = note.lyric.Substring(1, 1);
@@ -1177,29 +1188,28 @@ namespace OpenUtau.Plugin.Builtin {
                                 if (NoNext) {
                                     if (loi.StartsWith(".")) {
                                         AddPhoneme(phonemes, $"{C}w@");
-                                        AddPhoneme(phonemes, $"An", ViTri);
-                                        AddPhoneme(phonemes, $"n -", End);
+                                        AddPhoneme(phonemes, $"A{N}", ViTri);
                                     } else
-                                        AddPhoneme(phonemes, $"{C}wAn");
-                                    AddPhoneme(phonemes, $"n -", End);
+                                        AddPhoneme(phonemes, $"{C}wA{N}");
+                                    AddPhoneme(phonemes, $"{N_} -", End);
                                 } else { //
                                     if (loi.StartsWith(".")) {
                                         AddPhoneme(phonemes, $"{C}w@");
-                                        AddPhoneme(phonemes, $"An", ViTri);
+                                        AddPhoneme(phonemes, $"A{N}", ViTri);
                                     } else {
-                                        AddPhoneme(phonemes, $"{C}wAn");
+                                        AddPhoneme(phonemes, $"{C}wA{N}");
                                     }
                                 }
                             } else { // khuân luân
                                 if (NoNext) {
                                     AddPhoneme(phonemes, $"{C}w");
                                     AddPhoneme(phonemes, $"w@", Long);
-                                    AddPhoneme(phonemes, $"An", Medium);
-                                    AddPhoneme(phonemes, $"n -", End);
-                                } else { //
+                                    AddPhoneme(phonemes, $"A{N}", Medium);
+                                    AddPhoneme(phonemes, $"{N_} -", End);
+                                } else {
                                     AddPhoneme(phonemes, $"{C}w");
                                     AddPhoneme(phonemes, $"w@", Long);
-                                    AddPhoneme(phonemes, $"An", Medium);
+                                    AddPhoneme(phonemes, $"A{N}", Medium);
                                 }
                             }
                         } else if (NoNext) {
@@ -1485,7 +1495,7 @@ namespace OpenUtau.Plugin.Builtin {
                 if (num == "") {
                     num = "1";
                 }
-                if (vow == "-") {
+                if (vow == "-" || prevNeighbour == null) {
                     AddPhoneme(phonemes, $"breath{num}");
                 } else {
                     AddPhoneme(phonemes, $"{vow} -", -60);
