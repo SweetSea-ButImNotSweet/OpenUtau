@@ -461,7 +461,7 @@ namespace OpenUtau.Plugin.Builtin {
                 V1_1 = DecodeVinaConsonants(V1_1);
 
                 string N = V2;
-                ApDungNguyenTacRieng(loi, V1 + V2, ref V2, ref V2_2, ref N);
+                ApDungNguyenTacRieng(loi, V1 + V2, ref V2, ref V2_2, ref N, strictToneShift: true);
 
                 if (_CV && (isFirstNote || prevtontaiCcuoi)) { C = "- " + C; }
                 if (!isFirstNote) vow += " ";
@@ -599,7 +599,7 @@ namespace OpenUtau.Plugin.Builtin {
                     N = DecodeVinaConsonants(N);
                     N_ = DecodeVinaConsonants(N_);
 
-                    ApDungNguyenTacRieng(loi, V1 + V2, ref V2, ref V2_2, ref N);
+                    ApDungNguyenTacRieng(loi, V1 + V2, ref V2, ref V2_2, ref N, strictToneShift: true);
                     N_ = N;
 
                     // isFirstNote == true ở nhánh này
@@ -664,7 +664,7 @@ namespace OpenUtau.Plugin.Builtin {
                     } else { // isFirstNote OR (!isFirstNote && hasVCP)
                         if (tontaiCcuoi) { // có C ngắt
                             if (_C) {
-                                AddPhoneme(phonemes, isFirstNote ? $"- {Cw}" : prefixVCP, VCP);
+                                AddPhoneme(phonemes, isFirstNote ? $"- {Cw}" : $"{prefixVCP}{Cw}", VCP);
                                 AddPhoneme(phonemes, $"{C}{V1}{V2}");
                                 AddPhoneme(phonemes, $"{VC}", ViTri);
                             } else {
@@ -680,7 +680,7 @@ namespace OpenUtau.Plugin.Builtin {
                                         AddPhoneme(phonemes, isFirstNote ? $"A{N}" : $"A{N}", ViTri); // Kept same for now
                                         AddPhoneme(phonemes, $"{N_} -", End);
                                     } else if (_C) {
-                                        AddPhoneme(phonemes, isFirstNote ? $"- {Cw}" : prefixVCP, VCP);
+                                        AddPhoneme(phonemes, isFirstNote ? $"- {Cw}" : $"{prefixVCP}{Cw}", VCP);
                                         AddPhoneme(phonemes, isFirstNote ? $"{C}wA{N}" : $"{C}wA{N}"); // Kept same for now
                                         AddPhoneme(phonemes, $"{N_} -", End);
                                     } else {
@@ -693,7 +693,7 @@ namespace OpenUtau.Plugin.Builtin {
                                         AddPhoneme(phonemes, $"{C}w@");
                                         AddPhoneme(phonemes, $"A{N}", ViTri);
                                     } else if (_C) {
-                                        AddPhoneme(phonemes, isFirstNote ? $"- {Cw}" : prefixVCP, VCP);
+                                        AddPhoneme(phonemes, isFirstNote ? $"- {Cw}" : $"{prefixVCP}{Cw}", VCP);
                                         AddPhoneme(phonemes, $"{C}wA{N}");
                                     } else
                                         AddPhoneme(phonemes, $"{C}wA{N}");
@@ -701,7 +701,7 @@ namespace OpenUtau.Plugin.Builtin {
                             } else { // khuân luân
                                 if (NoNext) {
                                     if (_C) {
-                                        AddPhoneme(phonemes, isFirstNote ? $"- {Cw}" : prefixVCP, VCP);
+                                        AddPhoneme(phonemes, isFirstNote ? $"- {Cw}" : $"{prefixVCP}{Cw}", VCP);
                                         AddPhoneme(phonemes, $"{C}w");
                                         AddPhoneme(phonemes, isFirstNote ? $"_w@" : $"_w@", Long);
                                         AddPhoneme(phonemes, $"A{N}", Medium);
@@ -714,7 +714,7 @@ namespace OpenUtau.Plugin.Builtin {
                                     }
                                 } else { //
                                     if (_C) {
-                                        AddPhoneme(phonemes, isFirstNote ? $"- {Cw}" : prefixVCP, VCP);
+                                        AddPhoneme(phonemes, isFirstNote ? $"- {Cw}" : $"{prefixVCP}{Cw}", VCP);
                                         AddPhoneme(phonemes, $"{C}w");
                                         AddPhoneme(phonemes, $"_w@", Long);
                                         AddPhoneme(phonemes, $"A{N}", Medium);
@@ -728,7 +728,7 @@ namespace OpenUtau.Plugin.Builtin {
                         } else if (NoNext) {
                             if (VV_) {
                                 if (_C) {
-                                    AddPhoneme(phonemes, isFirstNote ? $"- {Cw}" : prefixVCP, VCP);
+                                    AddPhoneme(phonemes, isFirstNote ? $"- {Cw}" : $"{prefixVCP}{Cw}", VCP);
                                     AddPhoneme(phonemes, $"{C}{V1}{V2}");
                                     AddPhoneme(phonemes, isFirstNote ? $"{V2}{N_} -" : $"{V2}{N_} -", End);
                                 } else {
@@ -737,7 +737,7 @@ namespace OpenUtau.Plugin.Builtin {
                                 }
                             } else { // ko có VV -
                                 if (_C) {
-                                    AddPhoneme(phonemes, isFirstNote ? $"- {Cw}" : prefixVCP, VCP);
+                                    AddPhoneme(phonemes, isFirstNote ? $"- {Cw}" : $"{prefixVCP}{Cw}", VCP);
                                     AddPhoneme(phonemes, $"{C}{V1}{V2}");
                                     AddPhoneme(phonemes, $"{V2_2}{N}", ViTri);
                                     AddPhoneme(phonemes, $"{N_} -", End);
@@ -938,7 +938,7 @@ namespace OpenUtau.Plugin.Builtin {
                         V2 = DecodeVinaConsonants(V2);
                         if (wV) { V1 = "w"; }
                         string N = V2;
-                        ApDungNguyenTacRieng(loi, V1 + V2, ref V2, ref V2, ref N);
+                        ApDungNguyenTacRieng(loi, V1 + V2, ref V2, ref V2, ref N, strictToneShift: true);
                         string vowY3 = isFirstNote || hasPrefixVCP_y ? string.Empty : (vow_y + " ");
                         if (tontaiCcuoi) {
                             if (!isFirstNote && !hasPrefixVCP_y) {
@@ -1025,7 +1025,7 @@ namespace OpenUtau.Plugin.Builtin {
                         N = DecodeVinaConsonants(N);
 
                         string dummy = V2;
-                        ApDungNguyenTacRieng(loi, V1 + V2, ref V2, ref dummy, ref N);
+                        ApDungNguyenTacRieng(loi, V1 + V2, ref V2, ref dummy, ref N, strictToneShift: true);
                         if (tontaiCcuoi) {
                             AddPhoneme(phonemes, $"- {V1}");
                             AddPhoneme(phonemes, $"{V1}{V2}", ViTri);
@@ -1136,7 +1136,7 @@ namespace OpenUtau.Plugin.Builtin {
                     string VC = loi.Substring(2);
                     string N = loi.Substring(3);
                     string N_ = N;
-                    ApDungNguyenTacRieng(loi, V1 + V2, ref V2, ref V2_2, ref N);
+                    ApDungNguyenTacRieng(loi, V1 + V2, ref V2, ref V2_2, ref N, strictToneShift: true);
                     N_ = N;
                     if (V1 == "u") V1 = "w";
                     if (wV && _Cw) {
@@ -1245,15 +1245,13 @@ namespace OpenUtau.Plugin.Builtin {
                     string dummy = VVC;
                     ApDungNguyenTacRieng(loi, V1 + V2, ref VVC, ref dummy, ref N);
 
-                    bool _hasVCP = false;
-                    bool _hasPrefixVCP = false;
-                    string prefixVCP = vow;
-                    if (!isFirstNote) TinhToanAmChuyenTiep(note, loi, tontaiCcuoi, prevtontaiCcuoi, out _hasVCP, out _hasPrefixVCP);
-                    if (_hasPrefixVCP) prefixVCP = "- ";
+                    // BUGFIX: Không gọi lại TinhToanAmChuyenTiep với tham số sai.
+                    // Các biến vow / NoVCP / prevtontaiCcuoi đã được tính ở đầu Process().
+                    bool hasVCP = !NoVCP;
+                    bool hasPrefixVCP = prevtontaiCcuoi;
 
-                    if (_CV && isFirstNote) { C = "- " + C; } else if (_CV && !isFirstNote && prevtontaiCcuoi) { N = "- " + N; } // Specific to !isFirstNote logic for CVVVC
-
-                    bool noVCP = !_hasVCP && !isFirstNote;
+                    string prefixVCP = hasPrefixVCP ? "- " : vow;
+                    bool noVCP = !hasVCP && !isFirstNote;
 
                     if (!isFirstNote && noVCP) {
                         if (tontaiCcuoi) { // có C ngắt
@@ -1314,7 +1312,7 @@ namespace OpenUtau.Plugin.Builtin {
                     V2 = DecodeVinaConsonants(V2);
                     N = DecodeVinaConsonants(N);
                     string dummy = V2;
-                    ApDungNguyenTacRieng(loi, V1 + V2, ref V2, ref dummy, ref N);
+                    ApDungNguyenTacRieng(loi, V1 + V2, ref V2, ref dummy, ref N, strictToneShift: true);
                     if (prevtontaiCcuoi) vow = "."; else vow += " ";
                     if (prevtontaiCcuoi) {
                         if (tontaiCcuoi) {
