@@ -57,12 +57,23 @@ namespace OpenUtau.Plugin.Builtin {
                 .Replace('ừ', 'ư').Replace('ứ', 'ư').Replace('ử', 'ư').Replace('ữ', 'ư').Replace('ự', 'ư');
         }
 
-        private static string NormalizePhonetics(string text) {
+        /// <summary>
+        /// "Nén" các cụm chữ cái phức tạp (ch, ngh, th...) thành 1 ký tự duy nhất.
+        /// Việc này giúp đưa mọi từ tiếng Việt về cùng một hệ quy chiếu: 1 đơn vị ký tự = 1 đơn vị âm thanh.
+        /// Nhờ đó, biến "dem" (loi.Length) sẽ phản ánh đúng số lượng phonemes để rẽ nhánh logic chính xác.
+        /// </summary>
+        private static string EncodeToVina(string text) {
             if (string.IsNullOrEmpty(text)) return text;
-            // Map Vietnamese vowels to VINA phonetic symbols
-            text = text.Replace("ă", "a").Replace("â", "A").Replace("ơ", "@").Replace("y", "i")
+            text = text.Replace("ngh", "N").Replace("ch", "C").Replace("kh", "K").Replace("ng", "N").Replace("nh", "J")
+                       .Replace("tr", "Z").Replace("th", "T").Replace("gi", "z").Replace("qu", "w").Replace("gh", "g")
+                       .Replace("ph", "f").Replace("d", "z").Replace("đ", "d").Replace("c", "k").Replace("x", "s")
+                       .Replace("r", "z").Replace("q", "k");
+            return text.Replace("ă", "a").Replace("â", "A").Replace("ơ", "@").Replace("y", "i")
                        .Replace("ê", "E").Replace("ô", "O").Replace("ư", "U");
-            // Map Consonants
+        }
+
+        private static string DecodeVinaConsonants(string text) {
+            if (string.IsNullOrEmpty(text)) return text;
             return text.Replace("C", "ch").Replace("K", "kh").Replace("N", "ng").Replace("J", "nh")
                        .Replace("Z", "tr").Replace("T", "th");
         }
@@ -123,7 +134,7 @@ namespace OpenUtau.Plugin.Builtin {
             if (PR == "gi") PR = "zi";
 
             PR = RemoveTones(PR);
-            PR = NormalizePhonetics(PR);
+            PR = EncodeToVina(PR);
 
             if (currentLoi == "R") {
                 if (PR.EndsWith("ua") || PR.EndsWith("ưa") || PR.EndsWith("ia") || PR.EndsWith("uya")) vow = "@";
@@ -236,9 +247,12 @@ namespace OpenUtau.Plugin.Builtin {
             var loi = lyricWithoutTones;
 
             HashSet<string> specialGiEndings = new HashSet<string> { "gi", "gin", "gim", "ginh", "ging", "git", "gip", "gic", "gich" };
-            if (!specialGiEndings.Contains(rawLyric)) {
-                loi = NormalizePhonetics(loi);
+            if (specialGiEndings.Contains(loi)) {
+                loi = loi.Replace("gi", "zi");
             }
+            // Bước quan quyết định: Nén chữ để "lừa" biến đếm độ dài (loi.Length) bên dưới.
+            // Ví dụ: "cho" (3 chữ) -> "Co" (2 đơn vị âm thanh) -> Rơi đúng vào nhánh xử lý 2 âm.
+            loi = EncodeToVina(loi);
 
             bool tontaiVVC = VVC_LIST.Any(loi.EndsWith);
             bool tontaiCcuoi = CCUOI_ENDS.Any(loi.EndsWith);
@@ -256,15 +270,30 @@ namespace OpenUtau.Plugin.Builtin {
 
             var (kocoC, koVVCchia) = (!tontaiC, !tontaiVVC);
 
-            // Adjust timing positions based on lyric characteristics
-            if (VITRINGAN_ENDS.Any(loi.EndsWith) || VITRITB_CONTAINS.Any(loi.Contains) || VITRITB_ENDS.Any(loi.EndsWith) || VCP70 || loi.EndsWith("uôN")) {
-                ViTri = Short;
+            // Calculate VCP dynamically
+            if (prevNeighbour != null) {
+                if (prevNeighbour.Value.duration < 160) {
+                    VCP = -(prevNeighbour.Value.duration * 4 / 8);
+                } else if (VCP70) {
+                    VCP = -70;
+                } else {
+                    VCP = -110;
+                }
             }
-            if (VITRIDAI_ENDS.Any(loi.EndsWith)) {
+
+            // Adjust timing positions based on lyric characteristics
+            if (VITRINGAN_ENDS.Any(loi.EndsWith) || loi.EndsWith("uôN")) {
+                ViTri = Short;
+            } else if (VITRIDAI_ENDS.Any(loi.EndsWith)) {
                 ViTri = Long;
+            } else if (VITRITB_CONTAINS.Any(loi.Contains) || VITRITB_ENDS.Any(loi.EndsWith)) {
+                ViTri = Medium;
+            } else {
+                ViTri = Short;
             }
 
             var phoneme = "";
+            // Biến "dem" ở đây sẽ là số lượng "đơn vị âm thanh" sau khi đã nén ở trên.
             var dem = loi.Length;
             bool prevtontaiCcuoi = false;
             bool NoVCP = false;
@@ -276,6 +305,34 @@ namespace OpenUtau.Plugin.Builtin {
 
             if (note.lyric.StartsWith("?")) {
                 phoneme = note.lyric.Substring(1);
+            } else if (rawLyric == "qua") {
+                if (isFirstNote) {
+                    if (NoNext) {
+                        AddPhoneme(phonemes, "kwa");
+                        AddPhoneme(phonemes, "a -", End);
+                    } else {
+                        AddPhoneme(phonemes, "kwa");
+                    }
+                } else {
+                    if (NoVCP) {
+                        if (NoNext) {
+                            AddPhoneme(phonemes, "kwa");
+                            AddPhoneme(phonemes, "a -", End);
+                        } else {
+                            AddPhoneme(phonemes, "kwa");
+                        }
+                    } else {
+                        if (NoNext) {
+                            AddPhoneme(phonemes, $"{vow} k", VCP);
+                            AddPhoneme(phonemes, "kwa");
+                            AddPhoneme(phonemes, "a -", End);
+                        } else {
+                            AddPhoneme(phonemes, $"{vow} k", VCP);
+                            AddPhoneme(phonemes, "kwa");
+                        }
+                    }
+                }
+                return new Result { phonemes = phonemes.ToArray() };
             } else if (loi == "R") {
                 if (isFirstNote) {
                     string N = "R";
@@ -291,7 +348,7 @@ namespace OpenUtau.Plugin.Builtin {
                 // 1 âm
             } else if (dem == 1) {
                 string N = loi;
-                N = NormalizePhonetics(N);
+                N = DecodeVinaConsonants(N);
                 string N2 = N;
                 if (!isFirstNote) {
                     bool A = vow == "o" || vow == "O" || vow == "u";
@@ -315,13 +372,13 @@ namespace OpenUtau.Plugin.Builtin {
                 string N = loi;
                 string N1 = loi.Substring(0, 1);
                 string N2 = loi.Substring(1, 1);
-                N1 = NormalizePhonetics(N1);
+                N1 = DecodeVinaConsonants(N1);
                 if (_Cw) {
                     if (N2 == "u") N1 = N1 + "w";
                     if ((N2 == "i") || (N2 == "y")) N1 = N1 + "y";
                 }
-                N = NormalizePhonetics(N);
-                N2 = NormalizePhonetics(N2);
+                N = DecodeVinaConsonants(N);
+                N2 = DecodeVinaConsonants(N2);
 
                 if (_CV && (isFirstNote || prevtontaiCcuoi)) { N = "- " + N; }
                 if (!isFirstNote) vow += " ";
@@ -365,12 +422,12 @@ namespace OpenUtau.Plugin.Builtin {
                     V1 = "w";
                 } else if (_Cw) Cw = C + "w";
                 if (V1 == "i" && _Cw) Cw = C + "y";
-                Cw = NormalizePhonetics(Cw);
-                C = NormalizePhonetics(C);
-                V1 = NormalizePhonetics(V1);
-                V2 = NormalizePhonetics(V2);
-                V2_2 = NormalizePhonetics(V2_2);
-                V1_1 = NormalizePhonetics(V1_1);
+                Cw = DecodeVinaConsonants(Cw);
+                C = DecodeVinaConsonants(C);
+                V1 = DecodeVinaConsonants(V1);
+                V2 = DecodeVinaConsonants(V2);
+                V2_2 = DecodeVinaConsonants(V2_2);
+                V1_1 = DecodeVinaConsonants(V1_1);
                 a = IsToneShift(loi);
                 if (a && note.lyric != "qua") {
                     V2 = "@";
@@ -450,9 +507,9 @@ namespace OpenUtau.Plugin.Builtin {
                 string V1 = loi.Substring(0, 1);
                 string VVC = loi.Substring(0);
                 string C = loi.Substring(2);
-                V1 = NormalizePhonetics(V1);
-                VVC = NormalizePhonetics(VVC);
-                C = NormalizePhonetics(C);
+                V1 = DecodeVinaConsonants(V1);
+                VVC = DecodeVinaConsonants(VVC);
+                C = DecodeVinaConsonants(C);
                 string prefix = isFirstNote ? "" : "- ";
                 if (NoNext && tontaiCcuoi) {
                     AddPhoneme(phonemes, $"{prefix}{V1}");
@@ -473,10 +530,10 @@ namespace OpenUtau.Plugin.Builtin {
                     string VVC = loi.Substring(1);
                     string C = loi.Substring(3);
                     if (V1 == "u") V1 = "w";
-                    V1 = NormalizePhonetics(V1);
-                    V2 = NormalizePhonetics(V2);
-                    VVC = NormalizePhonetics(VVC);
-                    C = NormalizePhonetics(C);
+                    V1 = DecodeVinaConsonants(V1);
+                    V2 = DecodeVinaConsonants(V2);
+                    VVC = DecodeVinaConsonants(VVC);
+                    C = DecodeVinaConsonants(C);
 
                     bool hasVCP = false;
                     bool hasPrefixVCP = false;
@@ -541,14 +598,14 @@ namespace OpenUtau.Plugin.Builtin {
                         Cw = C + "y";
                     if (V2 == "ă") V2_2 = "ae";
                     if (!isFirstNote && V2 == "â") V2 = "@"; // From else branch
-                    C = NormalizePhonetics(C);
-                    Cw = NormalizePhonetics(Cw);
-                    V1 = NormalizePhonetics(V1);
-                    V2_2 = NormalizePhonetics(V2_2); // Ensure V2_2 normalization exists (from else branch)
-                    V2 = NormalizePhonetics(V2);
-                    VC = NormalizePhonetics(VC);
-                    N = NormalizePhonetics(N);
-                    N_ = NormalizePhonetics(N_);
+                    C = DecodeVinaConsonants(C);
+                    Cw = DecodeVinaConsonants(Cw);
+                    V1 = DecodeVinaConsonants(V1);
+                    V2_2 = DecodeVinaConsonants(V2_2); // Ensure V2_2 normalization exists (from else branch)
+                    V2 = DecodeVinaConsonants(V2);
+                    VC = DecodeVinaConsonants(VC);
+                    N = DecodeVinaConsonants(N);
+                    N_ = DecodeVinaConsonants(N_);
 
                     bool hasVCP = false;
                     bool hasPrefixVCP = false;
@@ -732,11 +789,11 @@ namespace OpenUtau.Plugin.Builtin {
                     if (V1 == "i" && _Cw) {
                         Cw = C + "y";
                     }
-                    C = NormalizePhonetics(C);
-                    Cw = NormalizePhonetics(Cw);
-                    V1 = NormalizePhonetics(V1);
-                    VVC = NormalizePhonetics(VVC);
-                    N = NormalizePhonetics(N);
+                    C = DecodeVinaConsonants(C);
+                    Cw = DecodeVinaConsonants(Cw);
+                    V1 = DecodeVinaConsonants(V1);
+                    VVC = DecodeVinaConsonants(VVC);
+                    N = DecodeVinaConsonants(N);
 
                     bool hasVCP = false;
                     bool hasPrefixVCP = false;
@@ -808,12 +865,12 @@ namespace OpenUtau.Plugin.Builtin {
                         V1 = "w";
                     if (V1 == "i")
                         Cw = C + "y";
-                    C = NormalizePhonetics(C);
-                    Cw = NormalizePhonetics(Cw);
-                    V1 = NormalizePhonetics(V1);
-                    V2 = NormalizePhonetics(V2);
-                    VVC = NormalizePhonetics(VVC);
-                    N = NormalizePhonetics(N);
+                    C = DecodeVinaConsonants(C);
+                    Cw = DecodeVinaConsonants(Cw);
+                    V1 = DecodeVinaConsonants(V1);
+                    V2 = DecodeVinaConsonants(V2);
+                    VVC = DecodeVinaConsonants(VVC);
+                    N = DecodeVinaConsonants(N);
                     if (_CV) { C = "- " + C; }
                     if (tontaiCcuoi) { // có C ngắt
                         if (_C) {
@@ -864,7 +921,7 @@ namespace OpenUtau.Plugin.Builtin {
                     if (dem == 2) { // ya
                         string C = note.lyric.Substring(0, 1);
                         string V = note.lyric.Substring(1, 1);
-                        V = NormalizePhonetics(V);
+                        V = DecodeVinaConsonants(V);
                         if (isFirstNote || hasPrefixVCP_y) {
                             // prefix là "- y" hoặc "- y" (khi có C trước)
                             if (NoNext) {
@@ -889,8 +946,8 @@ namespace OpenUtau.Plugin.Builtin {
                         string C = note.lyric.Substring(0, 1);
                         string V1 = note.lyric.Substring(1, 1);
                         string V2 = note.lyric.Substring(2, 1);
-                        V1 = NormalizePhonetics(V1);
-                        V2 = NormalizePhonetics(V2);
+                        V1 = DecodeVinaConsonants(V1);
+                        V2 = DecodeVinaConsonants(V2);
                         if (wV) { V1 = "w"; }
                         a = IsToneShift(loi);
                         if (a && note.lyric != "qua") { V2 = "@"; }
@@ -978,10 +1035,10 @@ namespace OpenUtau.Plugin.Builtin {
                         if (V1 == "ă") {
                             V1_ = "ae";
                         }
-                        V1 = NormalizePhonetics(V1);
-                        V1_ = NormalizePhonetics(V1_);
-                        V2 = NormalizePhonetics(V2);
-                        N = NormalizePhonetics(N);
+                        V1 = DecodeVinaConsonants(V1);
+                        V1_ = DecodeVinaConsonants(V1_);
+                        V2 = DecodeVinaConsonants(V2);
+                        N = DecodeVinaConsonants(N);
                         a = IsToneShift(loi);
                         if (a) {
                             V2 = "@";
@@ -1032,10 +1089,10 @@ namespace OpenUtau.Plugin.Builtin {
                         if (V2 == "â") {
                             V2 = "@";
                         }
-                        V1 = NormalizePhonetics(V1);
-                        V2 = NormalizePhonetics(V2);
-                        V2_2 = NormalizePhonetics(V2_2);
-                        V3 = NormalizePhonetics(V3);
+                        V1 = DecodeVinaConsonants(V1);
+                        V2 = DecodeVinaConsonants(V2);
+                        V2_2 = DecodeVinaConsonants(V2_2);
+                        V3 = DecodeVinaConsonants(V3);
                         string N = V3;
                         if (IsNgCoda(V2 + V3)) {
                             N = "ng0";
@@ -1069,10 +1126,10 @@ namespace OpenUtau.Plugin.Builtin {
                     string VVC = loi.Substring(1);
                     string C = loi.Substring(3);
                     if (V1 == "u") V1 = "w";
-                    V1 = NormalizePhonetics(V1);
-                    V2 = NormalizePhonetics(V2);
-                    VVC = NormalizePhonetics(VVC);
-                    C = NormalizePhonetics(C);
+                    V1 = DecodeVinaConsonants(V1);
+                    V2 = DecodeVinaConsonants(V2);
+                    VVC = DecodeVinaConsonants(VVC);
+                    C = DecodeVinaConsonants(C);
                     if (prevtontaiCcuoi) vow = "."; else vow += " ";
                     if (prevtontaiCcuoi) {
                         if (tontaiCcuoi) {
@@ -1126,14 +1183,14 @@ namespace OpenUtau.Plugin.Builtin {
                         Cw = C + "y";
                     if (V2 == "ă") V2_2 = "ae";
                     if (V2 == "â") V2 = "@";
-                    C = NormalizePhonetics(C);
-                    Cw = NormalizePhonetics(Cw);
-                    V1 = NormalizePhonetics(V1);
-                    V2_2 = NormalizePhonetics(V2_2);
-                    V2 = NormalizePhonetics(V2);
-                    VC = NormalizePhonetics(VC);
-                    N = NormalizePhonetics(N);
-                    N_ = NormalizePhonetics(N_);
+                    C = DecodeVinaConsonants(C);
+                    Cw = DecodeVinaConsonants(Cw);
+                    V1 = DecodeVinaConsonants(V1);
+                    V2_2 = DecodeVinaConsonants(V2_2);
+                    V2 = DecodeVinaConsonants(V2);
+                    VC = DecodeVinaConsonants(VC);
+                    N = DecodeVinaConsonants(N);
+                    N_ = DecodeVinaConsonants(N_);
                     if (_CV && prevtontaiCcuoi) { N = "- " + N; }
                     vow += " ";
                     if (NoVCP) {
@@ -1215,12 +1272,12 @@ namespace OpenUtau.Plugin.Builtin {
                         V1 = "w";
                     if (V1 == "i")
                         Cw = C + "y";
-                    C = NormalizePhonetics(C);
-                    Cw = NormalizePhonetics(Cw);
-                    V1 = NormalizePhonetics(V1);
-                    V2 = NormalizePhonetics(V2);
-                    VVC = NormalizePhonetics(VVC);
-                    N = NormalizePhonetics(N);
+                    C = DecodeVinaConsonants(C);
+                    Cw = DecodeVinaConsonants(Cw);
+                    V1 = DecodeVinaConsonants(V1);
+                    V2 = DecodeVinaConsonants(V2);
+                    VVC = DecodeVinaConsonants(VVC);
+                    N = DecodeVinaConsonants(N);
 
                     bool _hasVCP = false;
                     bool _hasPrefixVCP = false;
@@ -1286,10 +1343,10 @@ namespace OpenUtau.Plugin.Builtin {
                     if (V1 == "ă") {
                         V1_ = "ae";
                     }
-                    V1 = NormalizePhonetics(V1);
-                    V1_ = NormalizePhonetics(V1_);
-                    V2 = NormalizePhonetics(V2);
-                    N = NormalizePhonetics(N);
+                    V1 = DecodeVinaConsonants(V1);
+                    V1_ = DecodeVinaConsonants(V1_);
+                    V2 = DecodeVinaConsonants(V2);
+                    N = DecodeVinaConsonants(N);
                     a = IsToneShift(loi);
                     if (a) {
                         V2 = "@";
@@ -1370,11 +1427,11 @@ namespace OpenUtau.Plugin.Builtin {
                     if (V2 == "â") {
                         V2 = "@";
                     }
-                    V1 = NormalizePhonetics(V1);
-                    V2 = NormalizePhonetics(V2);
-                    V2_2 = NormalizePhonetics(V2_2);
+                    V1 = DecodeVinaConsonants(V1);
+                    V2 = DecodeVinaConsonants(V2);
+                    V2_2 = DecodeVinaConsonants(V2_2);
 
-                    V3 = NormalizePhonetics(V3);
+                    V3 = DecodeVinaConsonants(V3);
                     string N = V3;
                     if (V3 == "y") N = "i";
                     if (IsNgCoda(V2 + V3)) {
@@ -1430,9 +1487,9 @@ namespace OpenUtau.Plugin.Builtin {
                     string V1 = loi.Substring(0, 1);
                     string VVC = loi.Substring(0);
                     string C = loi.Substring(2);
-                    V1 = NormalizePhonetics(V1);
-                    VVC = NormalizePhonetics(VVC);
-                    C = NormalizePhonetics(C);
+                    V1 = DecodeVinaConsonants(V1);
+                    VVC = DecodeVinaConsonants(VVC);
+                    C = DecodeVinaConsonants(C);
                     if (prevtontaiCcuoi) vow = "."; else vow += " ";
                     if (NoNext && tontaiCcuoi) {
                         AddPhoneme(phonemes, $"{vow}{V1}");
