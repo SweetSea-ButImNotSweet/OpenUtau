@@ -109,8 +109,8 @@ namespace OpenUtau.Plugin.Builtin {
 
             PR = RemoveTones(PR);
             PR = PR.Replace("ch", "C").Replace("d", "z").Replace("đ", "d").Replace("ph", "f")
-                   .Replace("gi", "z").Replace("gh", "g").Replace("c", "k").Replace("kh", "K").Replace("ng", "N")
-                   .Replace("ngh", "N").Replace("nh", "J").Replace("x", "s").Replace("tr", "Z").Replace("th", "T")
+                   .Replace("gi", "z").Replace("gh", "g").Replace("c", "k").Replace("kh", "K").Replace("ngh", "N")
+                   .Replace("ng", "N").Replace("nh", "J").Replace("x", "s").Replace("r", "z").Replace("tr", "Z").Replace("th", "T")
                    .Replace("qu", "w");
 
             if (currentLoi == "R") {
@@ -220,8 +220,13 @@ namespace OpenUtau.Plugin.Builtin {
             HashSet<string> specialGiEndings = new HashSet<string> { "gi", "gin", "gim", "ginh", "ging", "git", "gip", "gic", "gich" };
             if (!specialGiEndings.Contains(rawLyric)) {
                 loi = loi.Replace("ch", "C").Replace("d", "z").Replace("đ", "d").Replace("ph", "f")
-                         .Replace("gi", "z").Replace("gh", "g").Replace("c", "k").Replace("kh", "K").Replace("ng", "N")
-                         .Replace("nh", "J").Replace("tr", "Z").Replace("th", "T").Replace("qu", "kw").Replace("q", "k");
+                         .Replace("gi", "z").Replace("gh", "g").Replace("c", "k").Replace("kh", "K").Replace("ngh", "N")
+                         .Replace("ng", "N").Replace("nh", "J").Replace("x", "s").Replace("r", "z")
+                         .Replace("tr", "Z").Replace("th", "T").Replace("qu", "kw").Replace("q", "k");
+            } else {
+                // Keep the historic special handling for gi* endings.
+                loi = loi.Replace("gi", "zi").Replace("ngh", "N").Replace("ng", "N")
+                         .Replace("nh", "J").Replace("ch", "C").Replace("c", "k");
             }
 
             bool tontaiVVC = VVC_LIST.Any(loi.EndsWith);
@@ -741,11 +746,8 @@ namespace OpenUtau.Plugin.Builtin {
                                      .Replace("ư", "U").Replace("C", "ch").Replace("N", "ng").Replace("J", "nh");
                         N = N.Replace("N", "ng").Replace("J", "nh");
 
-                        bool hasVCP = false;
-                        bool hasPrefixVCP = false;
-                        string prefixVCP = vow;
-                        if (!isFirstNote) TinhToanAmChuyenTiep(note, loi, tontaiCcuoi, prevtontaiCcuoi, out hasVCP, out hasPrefixVCP);
-                        if (hasPrefixVCP) prefixVCP = "- ";
+                        bool hasVCP = isFirstNote ? _C : !NoVCP;
+                        string prefixVCP = isFirstNote ? "- " : (vow + " ");
 
                         if (_CV && isFirstNote) { C = "- " + C; } else if (_CV && !isFirstNote && prevtontaiCcuoi) { C = "- " + C; } // From else branch
 
@@ -765,8 +767,8 @@ namespace OpenUtau.Plugin.Builtin {
                             }
                         } else {
                             if (tontaiCcuoi) { // có C ngắt
-                                if (_C) {
-                                    phonemes.Add(new Phoneme { phoneme = isFirstNote ? $"- {Cw}" : (vow + " " + Cw).Replace("  ", " "), position = VCP }); // Added vow space logic from else
+                                if (hasVCP) {
+                                    phonemes.Add(new Phoneme { phoneme = isFirstNote ? $"- {Cw}" : $"{prefixVCP}{Cw}", position = VCP });
                                     phonemes.Add(new Phoneme { phoneme = $"{C}{V1}" });
                                     phonemes.Add(new Phoneme { phoneme = $"{VVC}", position = ViTri });
                                 } else {
@@ -774,8 +776,8 @@ namespace OpenUtau.Plugin.Builtin {
                                     phonemes.Add(new Phoneme { phoneme = $"{VVC}", position = ViTri });
                                 }
                             } else if (NoNext) { // ko có note kế tiếp
-                                if (_C) {
-                                    phonemes.Add(new Phoneme { phoneme = isFirstNote ? $"- {Cw}" : (vow + " " + Cw).Replace("  ", " "), position = VCP });
+                                if (hasVCP) {
+                                    phonemes.Add(new Phoneme { phoneme = isFirstNote ? $"- {Cw}" : $"{prefixVCP}{Cw}", position = VCP });
                                     phonemes.Add(new Phoneme { phoneme = $"{C}{V1}" });
                                     phonemes.Add(new Phoneme { phoneme = $"{VVC}", position = ViTri });
                                     phonemes.Add(new Phoneme { phoneme = $"{N} -", position = End });
@@ -785,8 +787,8 @@ namespace OpenUtau.Plugin.Builtin {
                                     phonemes.Add(new Phoneme { phoneme = $"{N} -", position = End });
                                 }
                             } else { // có note kế tiếp
-                                if (_C) {
-                                    phonemes.Add(new Phoneme { phoneme = isFirstNote ? $"- {Cw}" : (vow + " " + Cw).Replace("  ", " "), position = VCP });
+                                if (hasVCP) {
+                                    phonemes.Add(new Phoneme { phoneme = isFirstNote ? $"- {Cw}" : $"{prefixVCP}{Cw}", position = VCP });
                                     phonemes.Add(new Phoneme { phoneme = $"{C}{V1}" });
                                     phonemes.Add(new Phoneme { phoneme = $"{VVC}", position = ViTri });
                                 } else {
@@ -797,7 +799,7 @@ namespace OpenUtau.Plugin.Builtin {
                         }
                     }
                     // 5 âm CVVVC, có VVC liền, chia 3 nốt, ví dụ "thuyết"
-                    if (!fry) {
+                    if (!fry && dem == 5 && tontaiVVC && tontaiC) {
                         string C = loi.Substring(0, 1);
                         string Cw = C;
                         string V1 = loi.Substring(1, 1);
@@ -819,10 +821,12 @@ namespace OpenUtau.Plugin.Builtin {
                                      .Replace("ư", "U").Replace("C", "ch").Replace("N", "ng").Replace("J", "nh");
                         N = N.Replace("N", "ng").Replace("J", "nh");
                         if (_CV) { C = "- " + C; }
+                        bool hasVCP = isFirstNote ? _C : true;
+                        string vcpPrefix = isFirstNote ? "- " : (vow + " ");
                         if (tontaiCcuoi) { // có C ngắt
-                            if (_C) {
+                            if (hasVCP) {
                                 phonemes.Add(
-                                new Phoneme { phoneme = $"- {Cw}", position = VCP });
+                                new Phoneme { phoneme = $"{vcpPrefix}{Cw}", position = VCP });
                                 phonemes.Add(
                                 new Phoneme { phoneme = $"{C}{V1}{V2}" });
                                 phonemes.Add(
@@ -835,9 +839,9 @@ namespace OpenUtau.Plugin.Builtin {
                             }
                         } else
                             if (NoNext) { // ko có note kế tiếp
-                                if (_C) {
+                                if (hasVCP) {
                                     phonemes.Add(
-                                    new Phoneme { phoneme = $"- {Cw}", position = VCP });
+                                    new Phoneme { phoneme = $"{vcpPrefix}{Cw}", position = VCP });
                                     phonemes.Add(
                                     new Phoneme { phoneme = $"{C}{V1}{V2}" });
                                     phonemes.Add(
@@ -853,9 +857,9 @@ namespace OpenUtau.Plugin.Builtin {
                                         new Phoneme { phoneme = $"{N} -", position = End });
                                 }
                             } else { // có note kế tiếp
-                                if (_C) {
+                                if (hasVCP) {
                                     phonemes.Add(
-                                    new Phoneme { phoneme = $"- {Cw}", position = VCP });
+                                    new Phoneme { phoneme = $"{vcpPrefix}{Cw}", position = VCP });
                                     phonemes.Add(
                                     new Phoneme { phoneme = $"{C}{V1}{V2}" });
                                     phonemes.Add(
@@ -1307,8 +1311,22 @@ namespace OpenUtau.Plugin.Builtin {
                         new Phoneme { phoneme = $"{C}{V1}{V2}" });
                                 phonemes.Add(
                         new Phoneme { phoneme = $"{VC}", position = ViTri });
-                            } else {
-                                // Removed redundant !isFirstNote logic for uân/uâng and general VVC
+                            } else if (NoNext) { // ko có note kế tiếp
+                                phonemes.Add(
+                        new Phoneme { phoneme = $"{vow}{Cw}", position = VCP });
+                                phonemes.Add(
+                        new Phoneme { phoneme = $"{C}{V1}{V2}" });
+                                phonemes.Add(
+                        new Phoneme { phoneme = $"{VC}", position = ViTri });
+                                phonemes.Add(
+                        new Phoneme { phoneme = $"{N} -", position = End });
+                            } else { // có note kế tiếp
+                                phonemes.Add(
+                        new Phoneme { phoneme = $"{vow}{Cw}", position = VCP });
+                                phonemes.Add(
+                        new Phoneme { phoneme = $"{C}{V1}{V2}" });
+                                phonemes.Add(
+                        new Phoneme { phoneme = $"{VC}", position = ViTri });
                             }
                         }
                     }
@@ -1514,7 +1532,7 @@ namespace OpenUtau.Plugin.Builtin {
                         string V2_2 = V2;
                         string V3 = loi.Substring(2, 1);
                         a = (loi.EndsWith("ia") || loi.EndsWith("ua") || loi.EndsWith("ưa") || loi.EndsWith("ya"));
-                        if (a) {
+                        if (a && !loi.Contains("qua")) {
                             V3 = "@";
                         }
                         if (wV) {
