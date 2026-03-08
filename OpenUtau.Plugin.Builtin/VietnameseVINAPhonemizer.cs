@@ -333,7 +333,7 @@ namespace OpenUtau.Plugin.Builtin {
             string vow = "";
             bool isFirstNote = prevNeighbour == null;
             if (!isFirstNote) {
-                vow = TinhToanAmChuyenTiep(prevNeighbour.Value, loi, H, _C, out prevtontaiCcuoi, out NoVCP);
+                vow = TinhToanAmChuyenTiep(prevNeighbour!.Value, loi, H, _C, out prevtontaiCcuoi, out NoVCP);
             }
 
             if (note.lyric.StartsWith("?")) {
@@ -478,11 +478,12 @@ namespace OpenUtau.Plugin.Builtin {
                             if (!isFirstNote) {
                                 bool A = vow == "o" || vow == "O" || vow == "u";
                                 if (A && loi == "ng") N2 = "ng0";
-                                if (!IsNasalLetter(loi)) {
-                                    vow += " ";
-                                }
-                                if (IsNasalLetter(loi) && prevtontaiCcuoi) { vow = "- "; } else if (prevtontaiCcuoi)
+                                if (!IsNasalLetter(loi)) { vow += " "; }
+                                if (IsNasalLetter(loi) && prevtontaiCcuoi) {
+                                    vow = "- ";
+                                } else if (prevtontaiCcuoi) {
                                     vow = ".";
+                                }
                             }
                             string onsetPrefix = isFirstNote ? "- " : vow;
 
@@ -536,22 +537,12 @@ namespace OpenUtau.Plugin.Builtin {
                             string V2 = loi.Substring(1, 1);
                             string N = V2;
                             if (loi.StartsWith("uy")) V2 = "i";
-                            if (IsN0Coda(V1 + V2)) {
-                                N = "ng0";
-                            }
-                            if (V2 == "y")
-                                N = "i";
-                            if (wV) {
-                                V1 = "w";
-                            }
-                            if (V1 == "â") {
-                                V1 = "@";
-                            }
-                            if (V1 + V2 == "ia" || V1 + V2 == "ua" || V1 + V2 == "ưa")
-                                N = "@";
-                            if (V1 == "ă") {
-                                V1_ = "ae";
-                            }
+                            if (IsN0Coda(V1 + V2)) N = "ng0";
+                            if (V2 == "y") N = "i";
+                            if (wV) V1 = "w";
+                            if (V1 == "â") V1 = "@";
+                            if (V1 + V2 == "ia" || V1 + V2 == "ua" || V1 + V2 == "ưa") N = "@";
+                            if (V1 == "ă") V1_ = "ae";
                             V1 = DecodeVinaConsonants(V1);
                             V1_ = DecodeVinaConsonants(V1_);
                             V2 = DecodeVinaConsonants(V2);
@@ -715,18 +706,10 @@ namespace OpenUtau.Plugin.Builtin {
                                 string V2_2 = V2;
                                 string V3 = loi.Substring(2, 1);
                                 a = IsToneShift(loi);
-                                if (a) {
-                                    V3 = "@";
-                                }
-                                if (wV) {
-                                    V1 = "w";
-                                }
-                                if (V2 == "ă") {
-                                    V2_2 = "ae";
-                                }
-                                if (V2 == "â") {
-                                    V2 = "@";
-                                }
+                                if (a) V3 = "@";
+                                if (wV) V1 = "w";
+                                if (V2 == "ă") V2_2 = "ae";
+                                if (V2 == "â") V2 = "@";
                                 V1 = DecodeVinaConsonants(V1);
                                 V2 = DecodeVinaConsonants(V2);
                                 V2_2 = DecodeVinaConsonants(V2_2);
