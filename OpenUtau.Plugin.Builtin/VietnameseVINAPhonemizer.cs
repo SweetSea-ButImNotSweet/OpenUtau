@@ -63,17 +63,37 @@ namespace OpenUtau.Plugin.Builtin {
                 .Replace('ừ', 'ư').Replace('ứ', 'ư').Replace('ử', 'ư').Replace('ữ', 'ư').Replace('ự', 'ư');
         }
 
+        private static string ReplaceS(string text, params (string from, string to)[] replacements) {
+            foreach (var r in replacements) {
+                text = text.Replace(r.from, r.to);
+            }
+            return text;
+        }
+
         /// <summary>
         /// "Nén" các cụm chữ cái phức tạp (ch, ngh, th...) thành 1 ký tự duy nhất.
         /// Việc này giúp đưa mọi từ tiếng Việt về cùng một hệ quy chiếu: 1 đơn vị ký tự = 1 đơn vị âm thanh.
         /// Nhờ đó, biến "dem" (loi.Length) sẽ phản ánh đúng số lượng phonemes để rẽ nhánh logic chính xác.
         /// </summary>
-        private static string EncodeToVina(string text) {
+        private static string EncodeToVina(string text, bool isSpecialGi = false) {
             if (string.IsNullOrEmpty(text)) return text;
-            return text.Replace("ngh", "N").Replace("ch", "C").Replace("kh", "K").Replace("ng", "N").Replace("nh", "J")
-                       .Replace("tr", "Z").Replace("th", "T").Replace("gi", "z").Replace("qu", "w").Replace("gh", "g")
-                       .Replace("ph", "f").Replace("d", "z").Replace("đ", "d").Replace("c", "k").Replace("x", "s")
-                       .Replace("r", "z").Replace("q", "k");
+            text = text.ToLower();
+            text = RemoveTones(text);
+
+            if (isSpecialGi) {
+                return ReplaceS(text,
+                    ("gi", "zi"), ("ngh", "N"), ("ng", "N"),
+                    ("nh", "J"), ("ch", "C"), ("c", "k")
+                );
+            }
+
+            return ReplaceS(text,
+                ("ch", "C"), ("d", "z"), ("đ", "d"), ("ph", "f"),
+                ("gi", "z"), ("gh", "g"), ("c", "k"), ("kh", "K"),
+                ("ngh", "N"), ("ng", "N"), ("nh", "J"), ("x", "s"),
+                ("r", "z"), ("tr", "Z"), ("th", "T"), ("qu", "kw"),
+                ("q", "k")
+            );
         }
 
         private static string EncodeVowelsToVina(string text) {
@@ -150,14 +170,10 @@ namespace OpenUtau.Plugin.Builtin {
             if (PR.EndsWith("ng")) vow = "ng";
             if (PR.EndsWith("ch") || PR.EndsWith("t") || PR.EndsWith("k") || PR.EndsWith("p")) vow = "-";
 
-            if (PR != "R") PR = PR.ToLower();
-            if (PR == "gi") PR = "zi";
-
-            PR = RemoveTones(PR);
-            PR = PR.Replace("ch", "C").Replace("d", "z").Replace("đ", "d").Replace("ph", "f")
-                   .Replace("gi", "z").Replace("gh", "g").Replace("c", "k").Replace("kh", "K").Replace("ngh", "N")
-                   .Replace("ng", "N").Replace("nh", "J").Replace("x", "s").Replace("r", "z").Replace("tr", "Z").Replace("th", "T")
-                   .Replace("qu", "w");
+            if (PR != "R") {
+                bool isSpecialGi = PR.ToLower() == "gi";
+                PR = EncodeToVina(PR, isSpecialGi);
+            }
 
             if (currentLoi == "R") {
                 if (PR.EndsWith("ua") || PR.EndsWith("ưa") || PR.EndsWith("ia") || PR.EndsWith("uya")) vow = "@";
@@ -271,20 +287,9 @@ namespace OpenUtau.Plugin.Builtin {
                 rawLyric = "quâc";
             }
 
-            var lyricWithoutTones = RemoveTones(rawLyric);
-            var loi = lyricWithoutTones;
-
             HashSet<string> specialGiEndings = new HashSet<string> { "gi", "gin", "gim", "ginh", "ging", "git", "gip", "gic", "gich" };
-            if (!specialGiEndings.Contains(rawLyric)) {
-                loi = loi.Replace("ch", "C").Replace("d", "z").Replace("đ", "d").Replace("ph", "f")
-                         .Replace("gi", "z").Replace("gh", "g").Replace("c", "k").Replace("kh", "K").Replace("ngh", "N")
-                         .Replace("ng", "N").Replace("nh", "J").Replace("x", "s").Replace("r", "z")
-                         .Replace("tr", "Z").Replace("th", "T").Replace("qu", "kw").Replace("q", "k");
-            } else {
-                // Keep the historic special handling for gi* endings.
-                loi = loi.Replace("gi", "zi").Replace("ngh", "N").Replace("ng", "N")
-                         .Replace("nh", "J").Replace("ch", "C").Replace("c", "k");
-            }
+            bool isSpecialGi = specialGiEndings.Contains(rawLyric);
+            var loi = note.lyric != "R" ? EncodeToVina(rawLyric, isSpecialGi) : "R";
 
             bool tontaiVVC = VVC_LIST.Any(loi.EndsWith);
             bool tontaiCcuoi = CCUOI_ENDS.Any(loi.EndsWith);
@@ -336,9 +341,7 @@ namespace OpenUtau.Plugin.Builtin {
                 vow = TinhToanAmChuyenTiep(prevNeighbour!.Value, loi, H, _C, out prevtontaiCcuoi, out NoVCP);
             }
 
-            if (note.lyric.StartsWith("?")) {
-                phoneme = note.lyric.Substring(1);
-            } else if (rawLyric == "qua") {
+            if (rawLyric == "qua") {
                 if (isFirstNote) {
                     if (NoNext) {
                         AddPhoneme(phonemes, "kwa");
@@ -390,7 +393,7 @@ namespace OpenUtau.Plugin.Builtin {
                     if (isFirstNote || hasPrefixVCP) {
                         if (NoNext) {
                             AddPhoneme(phonemes, $"- {C}{V}");
-                            AddPhoneme(phonemes, $"{V} -", End); // Using End as per branch 1 in original for ya
+                            AddPhoneme(phonemes, $"{V} -", ViTri); // Original first-note "ya" uses ViTri for tail
                         } else {
                             AddPhoneme(phonemes, $"- {C}{V}");
                         }
@@ -1187,7 +1190,8 @@ namespace OpenUtau.Plugin.Builtin {
                     if (num == "") {
                         num = "1";
                     }
-                    if (vow == "-") {
+                    // Original: when prevNeighbour==null only add breath; when prev has vow use vow + breath
+                    if (isFirstNote || vow == "-") {
                         AddPhoneme(phonemes, $"breath{num}");
                     } else {
                         AddPhoneme(phonemes, $"{vow} -", -60);
