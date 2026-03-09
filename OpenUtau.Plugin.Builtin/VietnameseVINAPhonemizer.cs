@@ -270,7 +270,7 @@ namespace OpenUtau.Plugin.Builtin {
             bool a = false;
             bool BR = note.lyric.StartsWith("breath");
 
-            if (note.lyric.StartsWith("?")) {
+            if (note.lyric.StartsWith('?')) {
                 AddPhoneme(phonemes, note.lyric[1..]);
                 var attr0 = note.phonemeAttributes?.FirstOrDefault(attr => attr.index == 0) ?? default;
                 if (
@@ -285,14 +285,14 @@ namespace OpenUtau.Plugin.Builtin {
             }
 
             bool NoNext = nextNeighbour == null && note.lyric != "R";
-            bool fry = note.lyric.EndsWith("'");
+            bool fry = note.lyric.EndsWith('\'');
 
             var rawLyric = note.lyric != "R" ? note.lyric.ToLower() : note.lyric;
             if (rawLyric == "quôc") {
                 rawLyric = "quâc";
             }
 
-            HashSet<string> specialGiEndings = new HashSet<string> { "gi", "gin", "gim", "ginh", "ging", "git", "gip", "gic", "gich" };
+            HashSet<string> specialGiEndings = ["gi", "gin", "gim", "ginh", "ging", "git", "gip", "gic", "gich"];
             bool isSpecialGi = specialGiEndings.Contains(rawLyric);
             var loi = note.lyric != "R" ? EncodeToVina(rawLyric, isSpecialGi) : "R";
 
@@ -304,22 +304,23 @@ namespace OpenUtau.Plugin.Builtin {
             bool _C = _C_STARTS.Any(loi.StartsWith);
             bool _Cw = _CW_STARTS.Any(loi.StartsWith);
 
-            bool wV = WV_CONTAINS.Any(loi.Contains) || loi.EndsWith("oa") || loi.EndsWith("oe") || loi.EndsWith("uê") || loi.EndsWith("uy") || loi.EndsWith("uơ");
+            bool wV = WV_CONTAINS.Any(loi.Contains)
+                || loi.EndsWith("oa")
+                || loi.EndsWith("oe")
+                || loi.EndsWith("uê")
+                || loi.EndsWith("uy")
+                || loi.EndsWith("uơ");
             bool VV_ = VV_UNDERSCORE_ENDS.Any(loi.EndsWith);
             bool wAn = WAN_STARTS.Any(loi.StartsWith);
             bool H = H_STARTS.Any(loi.StartsWith);
             bool VCP70 = VCP70_STARTS.Any(loi.StartsWith);
 
-            var (kocoC, koVVCchia) = (!tontaiC, !tontaiVVC);
-
-            if (VCP70) {
-                VCP = -70;
-            } else {
-                VCP = -110;
-            }
+            VCP = VCP70 ? -70 : -110;
             if (prevNeighbour != null && prevNeighbour.Value.duration < 160) {
                 VCP = -(prevNeighbour.Value.duration * 4 / 8);
             }
+
+            var (kocoC, koVVCchia) = (!tontaiC, !tontaiVVC);
 
             ViTri = Short;
             if (VITRITB_CONTAINS.Any(loi.Contains) || VITRITB_ENDS.Any(loi.EndsWith)) {
@@ -334,6 +335,7 @@ namespace OpenUtau.Plugin.Builtin {
             if (loi.EndsWith("uôN")) {
                 ViTri = Short;
             }
+
             // Biến "dem" ở đây sẽ là số lượng "đơn vị âm thanh" sau khi đã nén ở trên.
             var dem = loi.Length;
             bool prevtontaiCcuoi = false;
