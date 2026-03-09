@@ -347,32 +347,10 @@ namespace OpenUtau.Plugin.Builtin {
             }
 
             if (rawLyric == "qua") {
-                if (isFirstNote) {
-                    if (NoNext) {
-                        AddPhoneme(phonemes, "kwa");
-                        AddPhoneme(phonemes, "a -", End);
-                    } else {
-                        AddPhoneme(phonemes, "kwa");
-                    }
-                } else {
-                    if (NoVCP) {
-                        if (NoNext) {
-                            AddPhoneme(phonemes, "kwa");
-                            AddPhoneme(phonemes, "a -", End);
-                        } else {
-                            AddPhoneme(phonemes, "kwa");
-                        }
-                    } else {
-                        if (NoNext) {
-                            AddPhoneme(phonemes, $"{vow} k", VCP);
-                            AddPhoneme(phonemes, "kwa");
-                            AddPhoneme(phonemes, "a -", End);
-                        } else {
-                            AddPhoneme(phonemes, $"{vow} k", VCP);
-                            AddPhoneme(phonemes, "kwa");
-                        }
-                    }
-                }
+                bool needPrefix = !isFirstNote && !NoVCP;
+                if (needPrefix) AddPhoneme(phonemes, $"{vow} k", VCP);
+                AddPhoneme(phonemes, "kwa");
+                if (NoNext) AddPhoneme(phonemes, "a -", End);
             } else if (loi == "R") {
                 if (isFirstNote) {
                     string N = "R";
@@ -659,29 +637,14 @@ namespace OpenUtau.Plugin.Builtin {
                             bool hasVCP = isFirstNote ? _C : !NoVCP;
                             string prefixVCP = isFirstNote ? "- " : vow;
 
+                            if (hasVCP) AddPhoneme(phonemes, $"{prefixVCP}{(kAn ? "k" : Cw)}", VCP);
                             if (tontaiCcuoi) { // có C cuối (at, ac,...)
-                                if (hasVCP) {
-                                    AddPhoneme(phonemes, $"{prefixVCP}{Cw}", VCP);
-                                }
                                 AddPhoneme(phonemes, $"{C}{V1}");
                                 AddPhoneme(phonemes, $"{V1_1}{V2_2}", ViTri);
                             } else if (kAn) {
-                                if (NoNext) {
-                                    if (hasVCP) {
-                                        AddPhoneme(phonemes, $"{prefixVCP}k", VCP);
-                                    }
-                                    AddPhoneme(phonemes, $"kAn");
-                                    AddPhoneme(phonemes, $"n -", End);
-                                } else {
-                                    if (hasVCP) {
-                                        AddPhoneme(phonemes, $"{prefixVCP}k", VCP);
-                                    }
-                                    AddPhoneme(phonemes, $"kAn");
-                                }
+                                AddPhoneme(phonemes, $"kAn");
+                                if (NoNext) AddPhoneme(phonemes, $"n -", End);
                             } else if (NoNext) { // không có nốt kế tiếp
-                                if (hasVCP) {
-                                    AddPhoneme(phonemes, $"{prefixVCP}{Cw}", VCP);
-                                }
                                 if (VV_) {
                                     AddPhoneme(phonemes, $"{C}{V1}");
                                     AddPhoneme(phonemes, $"{V1_1}{V2} -", End);
@@ -694,9 +657,6 @@ namespace OpenUtau.Plugin.Builtin {
                                     AddPhoneme(phonemes, $"{N} -", End);
                                 }
                             } else { // có nốt kế tiếp
-                                if (hasVCP) {
-                                    AddPhoneme(phonemes, $"{prefixVCP}{Cw}", VCP);
-                                }
                                 if (VV_) {
                                     AddPhoneme(phonemes, $"{C}{V1}");
                                     AddPhoneme(phonemes, $"{V1_1}{V2_2}", ViTri);
@@ -847,34 +807,10 @@ namespace OpenUtau.Plugin.Builtin {
                                 bool hasVCP = isFirstNote ? _C : !NoVCP;
                                 string prefixVCP = isFirstNote ? "- " : vow;
 
-                                if (hasVCP) {
-                                    if (tontaiCcuoi) { // có C ngắt
-                                        AddPhoneme(phonemes, $"{prefixVCP}{Cw}", VCP);
-                                        AddPhoneme(phonemes, $"{C}{V1}");
-                                        AddPhoneme(phonemes, $"{VVC}", ViTri);
-                                    } else if (NoNext) { // ko có note kế tiếp
-                                        AddPhoneme(phonemes, $"{prefixVCP}{Cw}", VCP);
-                                        AddPhoneme(phonemes, $"{C}{V1}");
-                                        AddPhoneme(phonemes, $"{VVC}", ViTri);
-                                        AddPhoneme(phonemes, $"{N} -", End);
-                                    } else { // có note kế tiếp
-                                        AddPhoneme(phonemes, $"{prefixVCP}{Cw}", VCP);
-                                        AddPhoneme(phonemes, $"{C}{V1}");
-                                        AddPhoneme(phonemes, $"{VVC}", ViTri);
-                                    }
-                                } else {
-                                    if (tontaiCcuoi) { // có C ngắt
-                                        AddPhoneme(phonemes, $"{C}{V1}");
-                                        AddPhoneme(phonemes, $"{VVC}", ViTri);
-                                    } else if (NoNext) { // ko có note kế tiếp
-                                        AddPhoneme(phonemes, $"{C}{V1}");
-                                        AddPhoneme(phonemes, $"{VVC}", ViTri);
-                                        AddPhoneme(phonemes, $"{N} -", End);
-                                    } else { // có note kế tiếp
-                                        AddPhoneme(phonemes, $"{C}{V1}");
-                                        AddPhoneme(phonemes, $"{VVC}", ViTri);
-                                    }
-                                }
+                                if (hasVCP) AddPhoneme(phonemes, $"{prefixVCP}{Cw}", VCP);
+                                AddPhoneme(phonemes, $"{C}{V1}");
+                                AddPhoneme(phonemes, $"{VVC}", ViTri);
+                                if (!tontaiCcuoi && NoNext) AddPhoneme(phonemes, $"{N} -", End);
                             } else if (tontaiVVC && !tontaiC) { // 4 âm VVVC có VVC liền, chia 3 nốt, ví dụ "uyết" "uyên"
                                 string V1 = loi.Substring(0, 1);
                                 string V2 = loi.Substring(1, 1);
@@ -1156,37 +1092,10 @@ namespace OpenUtau.Plugin.Builtin {
                             if (_CV) { C = "- " + C; }
                             bool hasVCP = !isFirstNote || _C;
                             string vcpPrefix = isFirstNote ? "- " : (vow + " ");
-                            if (tontaiCcuoi) { // có C ngắt
-                                if (hasVCP) {
-                                    AddPhoneme(phonemes, $"{vcpPrefix}{Cw}", VCP);
-                                    AddPhoneme(phonemes, $"{C}{V1}{V2}");
-                                    AddPhoneme(phonemes, $"{VVC}", ViTri);
-                                } else {
-                                    AddPhoneme(phonemes, $"{C}{V1}{V2}");
-                                    AddPhoneme(phonemes, $"{VVC}", ViTri);
-                                }
-                            } else
-                                if (NoNext) { // ko có note kế tiếp
-                                    if (hasVCP) {
-                                        AddPhoneme(phonemes, $"{vcpPrefix}{Cw}", VCP);
-                                        AddPhoneme(phonemes, $"{C}{V1}{V2}");
-                                        AddPhoneme(phonemes, $"{VVC}", ViTri);
-                                        AddPhoneme(phonemes, $"{N} -", End);
-                                    } else {
-                                        AddPhoneme(phonemes, $"{C}{V1}{V2}");
-                                        AddPhoneme(phonemes, $"{VVC}", ViTri);
-                                        AddPhoneme(phonemes, $"{N} -", End);
-                                    }
-                                } else { // có note kế tiếp
-                                    if (hasVCP) {
-                                        AddPhoneme(phonemes, $"{vcpPrefix}{Cw}", VCP);
-                                        AddPhoneme(phonemes, $"{C}{V1}{V2}");
-                                        AddPhoneme(phonemes, $"{VVC}", ViTri);
-                                    } else {
-                                        AddPhoneme(phonemes, $"{C}{V1}{V2}");
-                                        AddPhoneme(phonemes, $"{VVC}", ViTri);
-                                    }
-                                }
+                            if (hasVCP) AddPhoneme(phonemes, $"{vcpPrefix}{Cw}", VCP);
+                            AddPhoneme(phonemes, $"{C}{V1}{V2}");
+                            AddPhoneme(phonemes, $"{VVC}", ViTri);
+                            if (NoNext) AddPhoneme(phonemes, $"{N} -", End);
                         }
                         break;
                 }
