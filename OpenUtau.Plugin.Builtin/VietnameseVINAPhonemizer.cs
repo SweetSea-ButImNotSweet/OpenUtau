@@ -48,28 +48,54 @@ namespace OpenUtau.Plugin.Builtin {
 
         private static string RemoveTones(string text) {
             if (string.IsNullOrEmpty(text)) return text;
-            return ReplaceS(text,
-                ("à", "a"), ("á", "a"), ("ả", "a"), ("ã", "a"), ("ạ", "a"),
-                ("ằ", "ă"), ("ắ", "ă"), ("ẳ", "ă"), ("ẵ", "ă"), ("ặ", "ă"),
-                ("ầ", "â"), ("ấ", "â"), ("ẩ", "â"), ("ẫ", "â"), ("ậ", "â"),
-                ("ờ", "ơ"), ("ớ", "ơ"), ("ở", "ơ"), ("ỡ", "ơ"), ("ợ", "ơ"),
-                ("ì", "i"), ("í", "i"), ("ỉ", "i"), ("ĩ", "i"), ("ị", "i"),
-                ("ỳ", "y"), ("ý", "y"), ("ỷ", "y"), ("ỹ", "y"), ("ỵ", "y"),
-                ("è", "e"), ("é", "e"), ("ẻ", "e"), ("ẽ", "e"), ("ẹ", "e"),
-                ("ề", "ê"), ("ế", "ê"), ("ể", "ê"), ("ễ", "ê"), ("ệ", "ê"),
-                ("ò", "o"), ("ó", "o"), ("ỏ", "o"), ("õ", "o"), ("ọ", "o"),
-                ("ồ", "ô"), ("ố", "ô"), ("ổ", "ô"), ("ỗ", "ô"), ("ộ", "ô"),
-                ("ù", "u"), ("ú", "u"), ("ủ", "u"), ("ũ", "u"), ("ụ", "u"),
-                ("ừ", "ư"), ("ứ", "ư"), ("ử", "ư"), ("ữ", "ư"), ("ự", "ư")
-            );
+            char[] result = text.ToCharArray();
+            for (int i = 0; i < result.Length; i++) {
+                switch (result[i]) {
+                    case 'à': case 'á': case 'ả': case 'ã': case 'ạ': result[i] = 'a'; break;
+                    case 'ằ': case 'ắ': case 'ẳ': case 'ẵ': case 'ặ': result[i] = 'ă'; break;
+                    case 'ầ': case 'ấ': case 'ẩ': case 'ẫ': case 'ậ': result[i] = 'â'; break;
+                    case 'ờ': case 'ớ': case 'ở': case 'ỡ': case 'ợ': result[i] = 'ơ'; break;
+                    case 'ì': case 'í': case 'ỉ': case 'ĩ': case 'ị': result[i] = 'i'; break;
+                    case 'ỳ': case 'ý': case 'ỷ': case 'ỹ': case 'ỵ': result[i] = 'y'; break;
+                    case 'è': case 'é': case 'ẻ': case 'ẽ': case 'ẹ': result[i] = 'e'; break;
+                    case 'ề': case 'ế': case 'ể': case 'ễ': case 'ệ': result[i] = 'ê'; break;
+                    case 'ò': case 'ó': case 'ỏ': case 'õ': case 'ọ': result[i] = 'o'; break;
+                    case 'ồ': case 'ố': case 'ổ': case 'ỗ': case 'ộ': result[i] = 'ô'; break;
+                    case 'ù': case 'ú': case 'ủ': case 'ũ': case 'ụ': result[i] = 'u'; break;
+                    case 'ừ': case 'ứ': case 'ử': case 'ữ': case 'ự': result[i] = 'ư'; break;
+                }
+            }
+            return new string(result);
         }
 
+        private static readonly (string from, string to)[] VinaNormalRules = [
+            ("ngh", "N"), ("ng", "N"), ("nh", "J"), ("ch", "C"), ("kh", "K"), ("tr", "Z"), ("th", "T"),
+            ("ph", "f"), ("gh", "g"), ("qu", "kw"), ("gi", "z"), ("d", "z"), ("đ", "d"), ("c", "k"),
+            ("x", "s"), ("r", "z"), ("q", "k")
+        ];
+
+        private static readonly (string from, string to)[] VinaSpecialGiRules = [
+            ("ngh", "N"), ("ng", "N"), ("gi", "zi"), ("nh", "J"), ("ch", "C"), ("c", "k")
+        ];
+
+        private static readonly (string from, string to)[] DecodeVinaRules = [
+            ("C", "ch"), ("K", "kh"), ("N", "ng"), ("J", "nh"), ("Z", "tr"), ("T", "th")
+        ];
+
+        private static readonly (string from, string to)[] EncodeVowelRules = [
+            ("ă", "a"), ("â", "A"), ("ơ", "@"), ("y", "i"), ("ê", "E"), ("ô", "O"), ("ư", "U")
+        ];
+
         private static string ReplaceS(string text, params (string from, string to)[] replacements) {
+            if (string.IsNullOrEmpty(text)) return text;
             foreach (var (from, to) in replacements) {
-                text = text.Replace(from, to);
+                text = text.Replace(from, to, StringComparison.Ordinal);
             }
             return text;
         }
+
+        private static string EncodeVowelsToVina(string text) => ReplaceS(text, EncodeVowelRules);
+        private static string DecodeVinaConsonants(string text) => ReplaceS(text, DecodeVinaRules);
 
         /// <summary>
         /// "Nén" các cụm chữ cái phức tạp (ch, ngh, th...) thành 1 ký tự duy nhất.
@@ -78,40 +104,15 @@ namespace OpenUtau.Plugin.Builtin {
         /// </summary>
         private static string EncodeToVina(string text, bool isSpecialGi = false) {
             if (string.IsNullOrEmpty(text)) return text;
-            text = text.ToLower();
-            text = RemoveTones(text);
+            text = RemoveTones(text.ToLower());
 
             if (isSpecialGi) {
-                return ReplaceS(text,
-                    ("gi", "zi"), ("ngh", "N"), ("ng", "N"),
-                    ("nh", "J"), ("ch", "C"), ("c", "k")
-                );
+                return ReplaceS(text, VinaSpecialGiRules);
             }
 
-            return ReplaceS(text,
-                ("ch", "C"), ("d", "z"), ("đ", "d"), ("ph", "f"),
-                ("gi", "z"), ("gh", "g"), ("c", "k"), ("kh", "K"),
-                ("ngh", "N"), ("ng", "N"), ("nh", "J"), ("x", "s"),
-                ("r", "z"), ("tr", "Z"), ("th", "T"), ("qu", "kw"),
-                ("q", "k")
-            );
+            return ReplaceS(text, VinaNormalRules);
         }
 
-        private static string EncodeVowelsToVina(string text) {
-            if (string.IsNullOrEmpty(text)) return text;
-            return ReplaceS(text,
-                ("ă", "a"), ("â", "A"), ("ơ", "@"), ("y", "i"),
-                ("ê", "E"), ("ô", "O"), ("ư", "U")
-            );
-        }
-
-        private static string DecodeVinaConsonants(string text) {
-            if (string.IsNullOrEmpty(text)) return text;
-            return ReplaceS(text,
-                ("C", "ch"), ("K", "kh"), ("N", "ng"), ("J", "nh"), ("Z", "tr"), ("T", "th"),
-                ("C", "ch"), ("K", "kh"), ("N", "ng"), ("J", "nh"), ("Z", "tr"), ("T", "th")
-            );
-        }
 
         private static void ApDungNguyenTacRieng(string loi, string v_part, ref string v_main, ref string v_alt, ref string n, bool strictToneShift = false) {
             // Logic gán @ cho các âm chuyển tiếp (Tone Shift)
@@ -162,11 +163,10 @@ namespace OpenUtau.Plugin.Builtin {
         /// Đồng thời nó xác định nốt trước có tận cùng bằng phụ âm đóng không (prevHasFinalC - ví dụ: t, p, c, k),
         /// và kiểm tra xem có cần bỏ qua việc nối âm (noVCP) do trùng phụ âm hoặc trùng nguyên âm không.
         /// </summary>
-        private string TinhToanAmChuyenTiep(Note prevNote, string currentLoi, bool isH, bool startsWithC, out bool prevHasFinalC, out bool noVCP) {
+        private static string TinhToanAmChuyenTiep(Note prevNote, string currentLoi, bool isH, bool startsWithC, out bool prevHasFinalC, out bool noVCP) {
             var prevLyric = prevNote.phoneticHint ?? prevNote.lyric;
             var unicode = ToUnicodeElements(prevLyric);
-            string vow = "-";
-            if (!vowelLookup.TryGetValue(unicode.LastOrDefault() ?? string.Empty, out vow)) {
+            if (!vowelLookup.TryGetValue(unicode.LastOrDefault() ?? string.Empty, out var vow)) {
                 vow = "-";
             }
 
@@ -284,17 +284,34 @@ namespace OpenUtau.Plugin.Builtin {
                 return new Result { phonemes = [.. phonemes] };
             }
 
+            bool isFirstNote = prevNeighbour == null;
             bool NoNext = nextNeighbour == null && note.lyric != "R";
             bool fry = note.lyric.EndsWith('\'');
+            var rawLyric = note.lyric;
 
-            var rawLyric = note.lyric != "R" ? note.lyric.ToLower() : note.lyric;
+            // Early exit for Rest notes
+            if (rawLyric == "R") {
+                if (isFirstNote) {
+                    AddPhoneme(phonemes, "- R");
+                    if (NoNext) {
+                        AddPhoneme(phonemes, "R -", End);
+                    }
+                } else {
+                    // Pre-calculate H and _C for R (which are false)
+                    string vowR = TinhToanAmChuyenTiep(prevNeighbour!.Value, "R", false, false, out _, out _);
+                    AddPhoneme(phonemes, $"{vowR} --");
+                }
+                return new Result { phonemes = [.. phonemes] };
+            }
+
+            rawLyric = rawLyric.ToLower();
             if (rawLyric == "quôc") {
                 rawLyric = "quâc";
             }
 
             HashSet<string> specialGiEndings = ["gi", "gin", "gim", "ginh", "ging", "git", "gip", "gic", "gich"];
             bool isSpecialGi = specialGiEndings.Contains(rawLyric);
-            var loi = note.lyric != "R" ? EncodeToVina(rawLyric, isSpecialGi) : "R";
+            var loi = EncodeToVina(rawLyric, isSpecialGi);
 
             bool tontaiVVC = VVC_LIST.Any(loi.EndsWith);
             bool tontaiCcuoi = CCUOI_ENDS.Any(loi.EndsWith);
@@ -341,7 +358,6 @@ namespace OpenUtau.Plugin.Builtin {
             bool prevtontaiCcuoi = false;
             bool NoVCP = false;
             string vow = "";
-            bool isFirstNote = prevNeighbour == null;
             if (!isFirstNote) {
                 vow = TinhToanAmChuyenTiep(prevNeighbour!.Value, loi, H, _C, out prevtontaiCcuoi, out NoVCP);
             }
@@ -484,7 +500,6 @@ namespace OpenUtau.Plugin.Builtin {
                     case 2:
                         if (tontaiC) {
                             // 2 âm CV, ví dụ: "ba"
-                            string N = loi;
                             string N1 = loi.Substring(0, 1);
                             string N2 = loi.Substring(1, 1);
                             N1 = DecodeVinaConsonants(N1);
@@ -492,7 +507,7 @@ namespace OpenUtau.Plugin.Builtin {
                                 if (N2 == "u") N1 = N1 + "w";
                                 if ((N2 == "i") || (N2 == "y")) N1 = N1 + "y";
                             }
-                            N = DecodeVinaConsonants(N);
+                            string N = DecodeVinaConsonants(loi);
                             N2 = DecodeVinaConsonants(N2);
 
                             if (_CV && (isFirstNote || prevtontaiCcuoi)) { N = "- " + N; }
@@ -1080,15 +1095,13 @@ namespace OpenUtau.Plugin.Builtin {
                                 V1 = "w";
                             if (V1 == "i")
                                 Cw = C + "y";
-                            C = ReplaceS(C, ("C", "ch"), ("K", "kh"), ("N", "ng"), ("J", "nh"), ("Z", "tr"), ("T", "th"));
-                            Cw = ReplaceS(Cw, ("C", "ch"), ("K", "kh"), ("N", "ng"), ("J", "nh"), ("Z", "tr"), ("T", "th"));
-                            V1 = ReplaceS(V1, ("ă", "a"), ("â", "A"), ("ơ", "@"), ("y", "i"), ("ê", "E"), ("ô", "O"), ("ư", "U"));
-                            V2 = ReplaceS(V2, ("ă", "a"), ("â", "A"), ("ơ", "@"), ("y", "i"), ("ê", "E"), ("ô", "O"), ("ư", "U"));
-                            VVC = ReplaceS(VVC,
-                                ("ă", "a"), ("â", "A"), ("ơ", "@"), ("y", "i"), ("ê", "E"), ("ô", "O"),
-                                ("ư", "U"), ("C", "ch"), ("N", "ng"), ("J", "nh")
-                            );
-                            N = ReplaceS(N, ("N", "ng"), ("J", "nh"));
+                            C = DecodeVinaConsonants(C);
+                            Cw = DecodeVinaConsonants(Cw);
+                            V1 = EncodeVowelsToVina(V1);
+                            V2 = EncodeVowelsToVina(V2);
+                            VVC = EncodeVowelsToVina(VVC);
+                            VVC = DecodeVinaConsonants(VVC);
+                            N = DecodeVinaConsonants(N);
                             if (_CV) { C = "- " + C; }
                             bool hasVCP = !isFirstNote || _C;
                             string vcpPrefix = isFirstNote ? "- " : (vow + " ");
