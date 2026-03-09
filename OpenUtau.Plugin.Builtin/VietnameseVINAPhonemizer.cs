@@ -48,24 +48,25 @@ namespace OpenUtau.Plugin.Builtin {
 
         private static string RemoveTones(string text) {
             if (string.IsNullOrEmpty(text)) return text;
-            return text
-                .Replace('à', 'a').Replace('á', 'a').Replace('ả', 'a').Replace('ã', 'a').Replace('ạ', 'a')
-                .Replace('ằ', 'ă').Replace('ắ', 'ă').Replace('ẳ', 'ă').Replace('ẵ', 'ă').Replace('ặ', 'ă')
-                .Replace('ầ', 'â').Replace('ấ', 'â').Replace('ẩ', 'â').Replace('ẫ', 'â').Replace('ậ', 'â')
-                .Replace('ờ', 'ơ').Replace('ớ', 'ơ').Replace('ở', 'ơ').Replace('ỡ', 'ơ').Replace('ợ', 'ơ')
-                .Replace('ì', 'i').Replace('í', 'i').Replace('ỉ', 'i').Replace('ĩ', 'i').Replace('ị', 'i')
-                .Replace('ỳ', 'y').Replace('ý', 'y').Replace('ỷ', 'y').Replace('ỹ', 'y').Replace('ỵ', 'y')
-                .Replace('è', 'e').Replace('é', 'e').Replace('ẻ', 'e').Replace('ẽ', 'e').Replace('ẹ', 'e')
-                .Replace('ề', 'ê').Replace('ế', 'ê').Replace('ể', 'ê').Replace('ễ', 'ê').Replace('ệ', 'ê')
-                .Replace('ò', 'o').Replace('ó', 'o').Replace('ỏ', 'o').Replace('õ', 'o').Replace('ọ', 'o')
-                .Replace('ồ', 'ô').Replace('ố', 'ô').Replace('ổ', 'ô').Replace('ỗ', 'ô').Replace('ộ', 'ô')
-                .Replace('ù', 'u').Replace('ú', 'u').Replace('ủ', 'u').Replace('ũ', 'u').Replace('ụ', 'u')
-                .Replace('ừ', 'ư').Replace('ứ', 'ư').Replace('ử', 'ư').Replace('ữ', 'ư').Replace('ự', 'ư');
+            return ReplaceS(text,
+                ("à", "a"), ("á", "a"), ("ả", "a"), ("ã", "a"), ("ạ", "a"),
+                ("ằ", "ă"), ("ắ", "ă"), ("ẳ", "ă"), ("ẵ", "ă"), ("ặ", "ă"),
+                ("ầ", "â"), ("ấ", "â"), ("ẩ", "â"), ("ẫ", "â"), ("ậ", "â"),
+                ("ờ", "ơ"), ("ớ", "ơ"), ("ở", "ơ"), ("ỡ", "ơ"), ("ợ", "ơ"),
+                ("ì", "i"), ("í", "i"), ("ỉ", "i"), ("ĩ", "i"), ("ị", "i"),
+                ("ỳ", "y"), ("ý", "y"), ("ỷ", "y"), ("ỹ", "y"), ("ỵ", "y"),
+                ("è", "e"), ("é", "e"), ("ẻ", "e"), ("ẽ", "e"), ("ẹ", "e"),
+                ("ề", "ê"), ("ế", "ê"), ("ể", "ê"), ("ễ", "ê"), ("ệ", "ê"),
+                ("ò", "o"), ("ó", "o"), ("ỏ", "o"), ("õ", "o"), ("ọ", "o"),
+                ("ồ", "ô"), ("ố", "ô"), ("ổ", "ô"), ("ỗ", "ô"), ("ộ", "ô"),
+                ("ù", "u"), ("ú", "u"), ("ủ", "u"), ("ũ", "u"), ("ụ", "u"),
+                ("ừ", "ư"), ("ứ", "ư"), ("ử", "ư"), ("ữ", "ư"), ("ự", "ư")
+            );
         }
 
         private static string ReplaceS(string text, params (string from, string to)[] replacements) {
-            foreach (var r in replacements) {
-                text = text.Replace(r.from, r.to);
+            foreach (var (from, to) in replacements) {
+                text = text.Replace(from, to);
             }
             return text;
         }
@@ -98,14 +99,18 @@ namespace OpenUtau.Plugin.Builtin {
 
         private static string EncodeVowelsToVina(string text) {
             if (string.IsNullOrEmpty(text)) return text;
-            return text.Replace("ă", "a").Replace("â", "A").Replace("ơ", "@").Replace("y", "i")
-                       .Replace("ê", "E").Replace("ô", "O").Replace("ư", "U");
+            return ReplaceS(text,
+                ("ă", "a"), ("â", "A"), ("ơ", "@"), ("y", "i"),
+                ("ê", "E"), ("ô", "O"), ("ư", "U")
+            );
         }
 
         private static string DecodeVinaConsonants(string text) {
             if (string.IsNullOrEmpty(text)) return text;
-            return text.Replace("C", "ch").Replace("K", "kh").Replace("N", "ng").Replace("J", "nh")
-                       .Replace("Z", "tr").Replace("T", "th");
+            return ReplaceS(text,
+                ("C", "ch"), ("K", "kh"), ("N", "ng"), ("J", "nh"), ("Z", "tr"), ("T", "th"),
+                ("C", "ch"), ("K", "kh"), ("N", "ng"), ("J", "nh"), ("Z", "tr"), ("T", "th")
+            );
         }
 
         private static void ApDungNguyenTacRieng(string loi, string v_part, ref string v_main, ref string v_alt, ref string n, bool strictToneShift = false) {
@@ -329,8 +334,6 @@ namespace OpenUtau.Plugin.Builtin {
             if (loi.EndsWith("uôN")) {
                 ViTri = Short;
             }
-
-            var phoneme = "";
             // Biến "dem" ở đây sẽ là số lượng "đơn vị âm thanh" sau khi đã nén ở trên.
             var dem = loi.Length;
             bool prevtontaiCcuoi = false;
@@ -746,7 +749,7 @@ namespace OpenUtau.Plugin.Builtin {
                                     }
                                 } else {
                                     string prefixVCP = isFirstNote ? "- " : vow;
-                                    bool hasVCP = isFirstNote ? wV : true;
+                                    bool hasVCP = !isFirstNote || wV;
 
                                     if (tontaiCcuoi && wV) {
                                         if (!isFirstNote) AddPhoneme(phonemes, $"{prefixVCP}{V1}", VCP);
@@ -949,7 +952,7 @@ namespace OpenUtau.Plugin.Builtin {
 
                                 bool hasVCP = isFirstNote ? _C : !NoVCP;
                                 string prefixVCP = isFirstNote ? "- " : vow;
-                                bool noVCP = isFirstNote ? false : NoVCP;
+                                bool noVCP = !isFirstNote && NoVCP;
 
                                 if (!isFirstNote) {
                                     if (_CV && prevtontaiCcuoi) { N = "- " + N; }
@@ -1139,15 +1142,17 @@ namespace OpenUtau.Plugin.Builtin {
                                 V1 = "w";
                             if (V1 == "i")
                                 Cw = C + "y";
-                            C = C.Replace("C", "ch").Replace("K", "kh").Replace("N", "ng").Replace("J", "nh").Replace("Z", "tr").Replace("T", "th");
-                            Cw = Cw.Replace("C", "ch").Replace("K", "kh").Replace("N", "ng").Replace("J", "nh").Replace("Z", "tr").Replace("T", "th");
-                            V1 = V1.Replace("ă", "a").Replace("â", "A").Replace("ơ", "@").Replace("y", "i").Replace("ê", "E").Replace("ô", "O").Replace("ư", "U");
-                            V2 = V2.Replace("ă", "a").Replace("â", "A").Replace("ơ", "@").Replace("y", "i").Replace("ê", "E").Replace("ô", "O").Replace("ư", "U");
-                            VVC = VVC.Replace("ă", "a").Replace("â", "A").Replace("ơ", "@").Replace("y", "i").Replace("ê", "E").Replace("ô", "O")
-                                         .Replace("ư", "U").Replace("C", "ch").Replace("N", "ng").Replace("J", "nh");
-                            N = N.Replace("N", "ng").Replace("J", "nh");
+                            C = ReplaceS(C, ("C", "ch"), ("K", "kh"), ("N", "ng"), ("J", "nh"), ("Z", "tr"), ("T", "th"));
+                            Cw = ReplaceS(Cw, ("C", "ch"), ("K", "kh"), ("N", "ng"), ("J", "nh"), ("Z", "tr"), ("T", "th"));
+                            V1 = ReplaceS(V1, ("ă", "a"), ("â", "A"), ("ơ", "@"), ("y", "i"), ("ê", "E"), ("ô", "O"), ("ư", "U"));
+                            V2 = ReplaceS(V2, ("ă", "a"), ("â", "A"), ("ơ", "@"), ("y", "i"), ("ê", "E"), ("ô", "O"), ("ư", "U"));
+                            VVC = ReplaceS(VVC,
+                                ("ă", "a"), ("â", "A"), ("ơ", "@"), ("y", "i"), ("ê", "E"), ("ô", "O"),
+                                ("ư", "U"), ("C", "ch"), ("N", "ng"), ("J", "nh")
+                            );
+                            N = ReplaceS(N, ("N", "ng"), ("J", "nh"));
                             if (_CV) { C = "- " + C; }
-                            bool hasVCP = isFirstNote ? _C : true;
+                            bool hasVCP = !isFirstNote || _C;
                             string vcpPrefix = isFirstNote ? "- " : (vow + " ");
                             if (tontaiCcuoi) { // có C ngắt
                                 if (hasVCP) {
